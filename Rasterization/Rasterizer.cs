@@ -40,17 +40,12 @@ public class Rasterizer
             Vertex b_vertex = _vertices[_tris[i].B];
             Vertex c_vertex = _vertices[_tris[i].C];
 
-            a_vertex = VertexShader(a_vertex);
-            b_vertex = VertexShader(b_vertex);
-            c_vertex = VertexShader(c_vertex);
+            var vertices = Transform(a_vertex, b_vertex, c_vertex);
             
-            a_vertex = Project(a_vertex);
-            b_vertex = Project(b_vertex);
-            c_vertex = Project(c_vertex);
 
-            a = ProjectTo2D(a_vertex, C);
-            b = ProjectTo2D(b_vertex, C);
-            c = ProjectTo2D(c_vertex, C);
+            a = ProjectTo2D(vertices.a, C);
+            b = ProjectTo2D(vertices.b, C);
+            c = ProjectTo2D(vertices.c, C);
 
             // for (int y = 0; y < _sizeY; y++)
             // {
@@ -77,6 +72,26 @@ public class Rasterizer
             polygons.Add(polygon);
         }
         return polygons;
+    }
+
+    private (Vertex a, Vertex b, Vertex c) Transform(Vertex a, Vertex b, Vertex c)
+    {
+        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(45f));
+        var V = Matrix4x4.CreateLookAt(new Vector3(0,0,-4), Vector3.Zero, new Vector3(0, -1, 0));
+
+        float near = 0.1f;
+        float far = 100;
+        var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _sizeX/_sizeY, near, far);
+
+        var MVP = M * V * P;
+        a = VertexShader(a, MVP);
+        b = VertexShader(b, MVP);
+        c = VertexShader(c, MVP);
+            
+        a = Project(a);
+        b = Project(b);
+        c = Project(c);
+        return (a, b, c);
     }
 
     private (float u, float v) GetUVCoordinates(Vector4 Q, (Vertex A, Vertex B, Vertex C) triangle)
@@ -109,10 +124,9 @@ public class Rasterizer
     }
 
 
-    private Vertex VertexShader(Vertex v)
+    private Vertex VertexShader(Vertex v, Matrix4x4 MVP)
     {
-        Vector4 pos = v.Position with {Z = 0, W = v.Position.Z + 4};
-        Vertex copy = v with {Position = pos};
-        return copy;
+        Vector4 transformedPosition = Vector4.Transform(v.Position, MVP);
+        return v with { Position = transformedPosition };
     }
 }
