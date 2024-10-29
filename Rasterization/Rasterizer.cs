@@ -29,23 +29,14 @@ public class Rasterizer
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
         
         List<Polygon> polygons = new List<Polygon>();
-
-        double C = _sizeX / 2 - 100; //good default is width/2
-        Point a;
-        Point b;
-        Point c;
         for (int i = 0; i < _tris.Count; i++)
         {
-            Vertex a_vertex = _vertices[_tris[i].A];
-            Vertex b_vertex = _vertices[_tris[i].B];
-            Vertex c_vertex = _vertices[_tris[i].C];
+            Vertex a = _vertices[_tris[i].A];
+            Vertex b = _vertices[_tris[i].B];
+            Vertex c = _vertices[_tris[i].C];
 
-            var vertices = Transform(a_vertex, b_vertex, c_vertex);
+            var vertices = Transform(a, b, c);
             
-
-            a = ProjectTo2D(vertices.a, C);
-            b = ProjectTo2D(vertices.b, C);
-            c = ProjectTo2D(vertices.c, C);
 
             // for (int y = 0; y < _sizeY; y++)
             // {
@@ -61,27 +52,33 @@ public class Rasterizer
             //         }
             //     }
             // }
-            
-            Polygon polygon = new Polygon();
-            PointCollection col =
-            [
-                a, b, c
-            ];
-            polygon.Points = col;
-            polygon.Stroke = Brushes.Black;
-            polygons.Add(polygon);
+            if (!isBackFacing(vertices.a, vertices.b, vertices.c))
+            {
+                Polygon polygon = new Polygon();
+                PointCollection col =
+                [
+                    new Point(vertices.a.X, vertices.a.Y),
+                    new Point(vertices.b.X, vertices.b.Y), 
+                    new Point(vertices.c.X, vertices.c.Y)
+                ];
+                polygon.Points = col;
+                polygon.Stroke = Brushes.Black;
+                polygons.Add(polygon);
+            }
         }
         return polygons;
     }
 
-    private (Vertex a, Vertex b, Vertex c) Transform(Vertex a, Vertex b, Vertex c)
+    private (Vector3 a, Vector3 b, Vector3 c) Transform(Vertex a, Vertex b, Vertex c)
     {
-        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(45f));
+        float C = _sizeX / 2; //good default is width/2
+        
+        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(45));
         var V = Matrix4x4.CreateLookAt(new Vector3(0,0,-4), Vector3.Zero, new Vector3(0, -1, 0));
 
         float near = 0.1f;
-        float far = 100;
-        var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), _sizeX/_sizeY, near, far);
+        float far = 100f;
+        var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX/_sizeY, near, far);
 
         var MVP = M * V * P;
         a = VertexShader(a, MVP);
@@ -91,7 +88,12 @@ public class Rasterizer
         a = Project(a);
         b = Project(b);
         c = Project(c);
-        return (a, b, c);
+
+        Vector3 pointA = ProjectTo2D(a, C);
+        Vector3 pointB = ProjectTo2D(b, C);
+        Vector3 pointc = ProjectTo2D(c, C);
+        
+        return (pointA, pointB, pointc);
     }
 
     private (float u, float v) GetUVCoordinates(Vector4 Q, (Vertex A, Vertex B, Vertex C) triangle)
@@ -110,17 +112,17 @@ public class Rasterizer
         return (uv.X, uv.Y) ;
     }
 
-    private Point ProjectTo2D(Vertex vertex, double c)
+    private Vector3 ProjectTo2D(Vertex vertex, float c)
     {
 
-        double x = vertex.Position.X * c + c;
-        double y = vertex.Position.Y * c + _sizeY/2;
-        return new Point(x, y);
+        float x = vertex.Position.X * c + c;
+        float y = vertex.Position.Y * c + _sizeY/2;
+        return new Vector3(x,y,0);
     }
 
     private Vertex Project(Vertex v)
     {
-        return (1 / v.Position.W) * v;
+        return (1f / v.Position.W) * v;
     }
 
 
@@ -128,5 +130,13 @@ public class Rasterizer
     {
         Vector4 transformedPosition = Vector4.Transform(v.Position, MVP);
         return v with { Position = transformedPosition };
+    }
+
+    private bool isBackFacing(Vector3 a, Vector3 b, Vector3 c)
+    {
+        Vector3 AB = new Vector3(b.X - a.X, b.Y - a.Y, 0);
+        Vector3 AC = new Vector3(c.X - a.X, c.Y - a.Y, 0);
+
+        return Vector3.Cross(AB, AC).Z > 0;
     }
 }
