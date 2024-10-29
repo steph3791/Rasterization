@@ -21,12 +21,14 @@ public partial class MainWindow : Window
     List<Vertex> _vertices = new List<Vertex>();
     List<(int A, int B, int C)> _tris = new List<(int A, int B, int C)>();
 
+    public static Canvas _canvas;
     private const int Size = 450;
     public MainWindow()
     {
         CompositionTarget.Rendering += (sender, args) => { RenderMesh(); };
         InitializeComponent();
         Width = Height = Size;
+        _canvas = Canvas;
         RenderMesh();
     }
     
@@ -42,7 +44,11 @@ public partial class MainWindow : Window
             new Vector3(1, 0, 1));
         
         Rasterizer rasterizer = new Rasterizer(Size, Size, _vertices, _tris);
-        Image.Source = rasterizer.Render();
+        foreach (var polygon in rasterizer.Render())
+        {
+            Canvas.Children.Add(polygon);
+        }
+
     }
     
 }

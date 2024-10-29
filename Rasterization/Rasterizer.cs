@@ -17,16 +17,18 @@ public class Rasterizer
 
     public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris)
     {
-        this._sizeX = sizeX;
-        this._sizeY = sizeY;
-        this._vertices = vertices;
-        this._tris = tris;
+        _sizeX = sizeX;
+        _sizeY = sizeY;
+        _vertices = vertices;
+        _tris = tris;
     }
 
-    public WriteableBitmap Render()
+    public List<Polygon> Render()
     {
         var bitmap = new WriteableBitmap(_sizeX, _sizeY, 96, 96, PixelFormats.Rgb24, null);
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
+        
+        List<Polygon> polygons = new List<Polygon>();
 
         double C = _sizeX / 2 - 100; //good default is width/2
         Point a;
@@ -38,44 +40,43 @@ public class Rasterizer
             Vertex b_vertex = _vertices[_tris[i].B];
             Vertex c_vertex = _vertices[_tris[i].C];
 
-            // a_vertex = VertexShader(a_vertex);
-            // b_vertex = VertexShader(a_vertex);
-            // c_vertex = VertexShader(a_vertex);
-            //
-            // a_vertex = Project(a_vertex);
-            // b_vertex = Project(b_vertex);
-            // c_vertex = Project(c_vertex);
+            a_vertex = VertexShader(a_vertex);
+            b_vertex = VertexShader(b_vertex);
+            c_vertex = VertexShader(c_vertex);
+            
+            a_vertex = Project(a_vertex);
+            b_vertex = Project(b_vertex);
+            c_vertex = Project(c_vertex);
 
             a = ProjectTo2D(a_vertex, C);
             b = ProjectTo2D(b_vertex, C);
             c = ProjectTo2D(c_vertex, C);
 
-            for (int y = 0; y < _sizeY; y++)
-            {
-                for (int x = 0; x < _sizeX; x++)
-                {
-                    (float u, float v) = GetUVCoordinates(new Vector4(x, y, 0,1), (a_vertex, b_vertex, c_vertex));
-                    if (u >= 0 && v >= 0 && (u + v) < 1)
-                    {
-                        int index = y * (_sizeX * 3) + x * 3; //FIXME sizeX or sizeY ???
-                        pixels[index] = 0;
-                        pixels[index + 1] = 0;
-                        pixels[index + 2] = 0;
-                    }
-                }
-            }
+            // for (int y = 0; y < _sizeY; y++)
+            // {
+            //     for (int x = 0; x < _sizeX; x++)
+            //     {
+            //         (float u, float v) = GetUVCoordinates(new Vector4(x, y, 0,1), (a_vertex, b_vertex, c_vertex));
+            //         if (u >= 0 && v >= 0 && (u + v) < 1)
+            //         {
+            //             int index = y * (_sizeX * 3) + x * 3; //FIXME sizeX or sizeY ???
+            //             pixels[index] = 0;
+            //             pixels[index + 1] = 0;
+            //             pixels[index + 2] = 0;
+            //         }
+            //     }
+            // }
             
-            // Polygon polygon = new Polygon();
-            // PointCollection col =
-            // [
-            //     a, b, c
-            // ];
-            // polygon.Points = col;
-            // polygon.Stroke = Brushes.Black;
-            // Canvas.Children.Add(polygon);
+            Polygon polygon = new Polygon();
+            PointCollection col =
+            [
+                a, b, c
+            ];
+            polygon.Points = col;
+            polygon.Stroke = Brushes.Black;
+            polygons.Add(polygon);
         }
-
-        return bitmap;
+        return polygons;
     }
 
     private (float u, float v) GetUVCoordinates(Vector4 Q, (Vertex A, Vertex B, Vertex C) triangle)
@@ -96,17 +97,15 @@ public class Rasterizer
 
     private Point ProjectTo2D(Vertex vertex, double c)
     {
-        double x = vertex.Position.X * _sizeX / 2 + _sizeX / 2;
-        double y = vertex.Position.Y * _sizeX / 2 + _sizeX / 2;
-        double z = vertex.Position.Z + 4;
-        x = c * vertex.Position.X / z + _sizeX / 2;
-        y = c * vertex.Position.Y / z + _sizeX / 2;
+
+        double x = vertex.Position.X * c + c;
+        double y = vertex.Position.Y * c + _sizeY/2;
         return new Point(x, y);
     }
 
     private Vertex Project(Vertex v)
     {
-        return 1 / v.Position.W * v;
+        return (1 / v.Position.W) * v;
     }
 
 
