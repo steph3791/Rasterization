@@ -12,15 +12,22 @@ public class Rasterizer
     private readonly int _sizeX;
     private readonly int _sizeY;
     
+    private DateTime _lastTime = DateTime.Now;
+    
     List<Vertex> _vertices;
     List<(int A, int B, int C)> _tris;
 
-    public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris)
+    private Animator _animator;
+    private float _rotationDegrees = 0f;
+    private float _rotationSpeed = 0.05f;
+
+    public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris, Animator animator)
     {
         _sizeX = sizeX;
         _sizeY = sizeY;
         _vertices = vertices;
         _tris = tris;
+        _animator = animator;
     }
 
     public List<Polygon> Render()
@@ -36,22 +43,7 @@ public class Rasterizer
             Vertex c = _vertices[_tris[i].C];
 
             var vertices = Transform(a, b, c);
-            
 
-            // for (int y = 0; y < _sizeY; y++)
-            // {
-            //     for (int x = 0; x < _sizeX; x++)
-            //     {
-            //         (float u, float v) = GetUVCoordinates(new Vector4(x, y, 0,1), (a_vertex, b_vertex, c_vertex));
-            //         if (u >= 0 && v >= 0 && (u + v) < 1)
-            //         {
-            //             int index = y * (_sizeX * 3) + x * 3; //FIXME sizeX or sizeY ???
-            //             pixels[index] = 0;
-            //             pixels[index + 1] = 0;
-            //             pixels[index + 2] = 0;
-            //         }
-            //     }
-            // }
             if (!isBackFacing(vertices.a, vertices.b, vertices.c))
             {
                 Polygon polygon = new Polygon();
@@ -63,6 +55,7 @@ public class Rasterizer
                 ];
                 polygon.Points = col;
                 polygon.Stroke = Brushes.Black;
+                polygon.Fill = Brushes.Gray;
                 polygons.Add(polygon);
             }
         }
@@ -72,8 +65,9 @@ public class Rasterizer
     private (Vector3 a, Vector3 b, Vector3 c) Transform(Vertex a, Vertex b, Vertex c)
     {
         float C = _sizeX / 2; //good default is width/2
-        
-        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(45));
+        // float deltaTime = _animator.GetDeltaTime();
+        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
+        _rotationDegrees += (_rotationSpeed * _animator.GetDeltaTime()) % 360;
         var V = Matrix4x4.CreateLookAt(new Vector3(0,0,-4), Vector3.Zero, new Vector3(0, -1, 0));
 
         float near = 0.1f;
