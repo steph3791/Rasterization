@@ -23,7 +23,6 @@ public partial class MainWindow : Window
     Rasterizer _rasterizer;
     Animator _animator;
     
-    public static Canvas _canvas;
     private const int Size = 450;
     
     
@@ -32,14 +31,14 @@ public partial class MainWindow : Window
         CompositionTarget.Rendering += (sender, args) => { CreateMesh(); };
         InitializeComponent();
         Width = Height = Size;
-        _canvas = Canvas;
         CreateMesh();
 
-        _animator = new Animator(24);
+        _animator = new Animator(16);
         _rasterizer = new Rasterizer(Size, Size, _vertices, _tris, _animator);
 
         _animator.RegisterAnimation(Render);
         _animator.Start();
+        // Render();
     }
     
 
@@ -56,11 +55,8 @@ public partial class MainWindow : Window
 
     private void Render()
     {
-        Canvas.Children.Clear();
-        foreach (var polygon in _rasterizer.Render())
-        {
-            Canvas.Children.Add(polygon);
-        }
+        Image.Source = _rasterizer.Render();
+
     }
     
 }
