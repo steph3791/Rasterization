@@ -33,6 +33,14 @@ public class Rasterizer
         var bitmap = new WriteableBitmap(_sizeX, _sizeY, 96, 96, PixelFormats.Rgb24, null);
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
         
+        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
+        var V = Matrix4x4.CreateLookAt(new Vector3(0, 0, -4), Vector3.Zero, new Vector3(0, -1, 0));
+
+        float near = 0.1f;
+        float far = 100f;
+        var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
+        var MVP = M * V * P;
+        
         _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
         for (int i = 0; i < _tris.Count; i++)
         {
@@ -42,12 +50,15 @@ public class Rasterizer
             Vertex c = _vertices[_tris[i].C];
 
             //Vertex Shader
-            var vertices = VertexShader(a, b, c);
+            a = VertexShader(a, M, MVP);
+            b = VertexShader(b, M, MVP);
+            c = VertexShader(c, M, MVP);
+            // var vertices = VertexShader(a, b, c);
             
             //Project vertices through Scaling with 1/position.w
-            a = Project(vertices.a);
-            b = Project(vertices.b);
-            c = Project(vertices.c);
+            a = Project(a);
+            b = Project(b);
+            c = Project(c);
 
             Vector3 posA = ProjectTo2D(a, _sizeX / 2f);
             Vector3 posB = ProjectTo2D(b, _sizeX / 2f);
@@ -106,23 +117,6 @@ public class Rasterizer
         return colorQ;
     }
     
-    private (Vertex a, Vertex b, Vertex c) VertexShader(Vertex a, Vertex b, Vertex c)
-    {
-        var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
-        Console.WriteLine(_rotationDegrees);
-        var V = Matrix4x4.CreateLookAt(new Vector3(0, 0, -4), Vector3.Zero, new Vector3(0, -1, 0));
-
-        float near = 0.1f;
-        float far = 100f;
-        var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
-
-        var MVP = M * V * P;
-        a = ApplyMatrices(a, M, MVP);
-        b = ApplyMatrices(b, M, MVP);
-        c = ApplyMatrices(c, M, MVP);
-        return (a, b, c);
-    }
-    
     private Vector3 ProjectTo2D(Vertex vertex, float c)
     {
         float x = vertex.Position.X * c + c;
@@ -135,7 +129,7 @@ public class Rasterizer
         return (1f / v.Position.W) * v;
     }
     
-    private Vertex ApplyMatrices(Vertex v, Matrix4x4 M, Matrix4x4 MVP)
+    private Vertex VertexShader(Vertex v, Matrix4x4 M, Matrix4x4 MVP)
     {
         Vector4 transformedPosition = Vector4.Transform(v.Position, MVP);
         Vector3 tranformedWorldCoords = Vector3.Transform(v.WorldCoordinates, M);
