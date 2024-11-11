@@ -53,16 +53,15 @@ public class Rasterizer
             a = VertexShader(a, M, MVP);
             b = VertexShader(b, M, MVP);
             c = VertexShader(c, M, MVP);
-            // var vertices = VertexShader(a, b, c);
             
             //Project vertices through Scaling with 1/position.w
             a = Project(a);
             b = Project(b);
             c = Project(c);
 
-            Vector3 posA = ProjectTo2D(a, _sizeX / 2f);
-            Vector3 posB = ProjectTo2D(b, _sizeX / 2f);
-            Vector3 posC = ProjectTo2D(c, _sizeX / 2f);
+            Vector2 posA = ProjectTo2D(a, _sizeX / 2f);
+            Vector2 posB = ProjectTo2D(b, _sizeX / 2f);
+            Vector2 posC = ProjectTo2D(c, _sizeX / 2f);
 
             var boundingCoords = GetBoundingCoordinates(posA, posB, posC);
 
@@ -90,10 +89,10 @@ public class Rasterizer
         return bitmap;
     }
 
-    private (float u, float v) Rasterize(Vector2 Q, (Vector3 a, Vector3 b, Vector3 c) triangle)
+    private (float u, float v) Rasterize(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle)
     {
-        Vector3 AB = triangle.b - triangle.a;
-        Vector3 AC = triangle.c - triangle.a;
+        Vector2 AB = triangle.b - triangle.a;
+        Vector2 AC = triangle.c - triangle.a;
         Vector2 AQ = new Vector2(Q.X - triangle.a.X, Q.Y - triangle.a.Y);
 
         float matrix00 = AC.Y;
@@ -109,7 +108,7 @@ public class Rasterizer
         return (u, v);
     }
     
-    private Vector3 GetColorAtPoint(Vector2 Q, (Vector3 a, Vector3 b, Vector3 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
+    private Vector3 GetColorAtPoint(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
     {
         (float u, float v) = Rasterize(Q, triangle);
         Vector3 colorQ = u * colors.colorB + v * colors.colorC + (1 - u - v) * colors.colorA;
@@ -117,11 +116,11 @@ public class Rasterizer
         return colorQ;
     }
     
-    private Vector3 ProjectTo2D(Vertex vertex, float c)
+    private Vector2 ProjectTo2D(Vertex vertex, float c)
     {
         float x = vertex.Position.X * c + c;
         float y = vertex.Position.Y * c + _sizeY / 2;
-        return new Vector3(x, y, 0);
+        return new Vector2(x, y);
     }
 
     private Vertex Project(Vertex v)
@@ -150,7 +149,7 @@ public class Rasterizer
         return normal;
     }
 
-    private bool isBackFacing(Vector3 a, Vector3 b, Vector3 c)
+    private bool isBackFacing(Vector2 a, Vector2 b, Vector2 c)
     {
         Vector3 AB = new Vector3(b.X - a.X, b.Y - a.Y, 0);
         Vector3 AC = new Vector3(c.X - a.X, c.Y - a.Y, 0);
@@ -158,7 +157,7 @@ public class Rasterizer
         return Vector3.Cross(AB, AC).Z > 0;
     }
 
-    private (int minX, int maxX, int minY, int maxY) GetBoundingCoordinates(Vector3 a, Vector3 b, Vector3 c)
+    private (int minX, int maxX, int minY, int maxY) GetBoundingCoordinates(Vector2 a, Vector2 b, Vector2 c)
     {
         int minX = (int) MathF.Min(a.X, MathF.Min(b.X, c.X));
         int minY = (int) MathF.Min(a.Y, MathF.Min(b.Y, c.Y));
