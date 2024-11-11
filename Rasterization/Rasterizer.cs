@@ -72,18 +72,16 @@ public class Rasterizer
                 {
                     for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
                     {
-                        var uv = Rasterize(new Vector2(x, y), (posA, posB, posC));
-                        if (uv.u >= 0 && uv.v >= 0 && (uv.u + uv.v) < 1)
+                        Vertex Q = new Vertex(new Vector3(x, y, 0), Vector3.Zero, new Vector2(0, 0), -Vector3.UnitZ);
+                        Q = Rasterize(Q, (posA, posB, posC), (a.Color, b.Color, c.Color));
+                        if (Q.ST.X >= 0 && Q.ST.Y >= 0 && (Q.ST.X + Q.ST.Y) < 1)
                         {
-             
                             int index = y * (_sizeX * 3) + x * 3;
-                            Vector3 color = GetColorAtPoint(new Vector2(x,y), (posA, posB, posC) , (a.Color, b.Color, c.Color));
-                            pixels[index] =  (byte)Math.Clamp(color.X * 255, 0, 255);
-                            pixels[index + 1] = (byte)Math.Clamp(color.Y * 255, 0, 255);
-                            pixels[index + 2] = (byte)Math.Clamp(color.Z * 255, 0, 255);
+                            pixels[index] = (byte) Math.Clamp(Q.Color.X * 255, 0, 255);
+                            pixels[index + 1] = (byte) Math.Clamp(Q.Color.Y * 255, 0, 255);
+                            pixels[index + 2] = (byte) Math.Clamp(Q.Color.Z * 255, 0, 255);
                         }
                     }
-                
                 });
             }
         }
@@ -91,11 +89,11 @@ public class Rasterizer
         return bitmap;
     }
 
-    private (float u, float v) Rasterize(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle)
+    private Vertex Rasterize(Vertex Q, (Vector2 a, Vector2 b, Vector2 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
     {
         Vector2 AB = triangle.b - triangle.a;
         Vector2 AC = triangle.c - triangle.a;
-        Vector2 AQ = new Vector2(Q.X - triangle.a.X, Q.Y - triangle.a.Y);
+        Vector2 AQ = new Vector2(Q.Position.X - triangle.a.X, Q.Position.Y - triangle.a.Y);
 
         float matrix00 = AC.Y;
         float matrix01 = -AC.X;
@@ -106,18 +104,21 @@ public class Rasterizer
 
         float u = factor1 * (matrix00 * AQ.X + matrix01 * AQ.Y);
         float v = factor1 * (matrix10 * AQ.X + matrix11 * AQ.Y);
-
-        return (u, v);
-    }
-    
-    private Vector3 GetColorAtPoint(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
-    {
-        (float u, float v) = Rasterize(Q, triangle);
+        
         Vector3 colorQ = u * colors.colorB + v * colors.colorC + (1 - u - v) * colors.colorA;
 
-        return colorQ;
+        Vertex newQ = Q with {ST = new Vector2(u, v), Color = colorQ};
+        return newQ;
     }
-    
+
+    // private Vector3 GetColorAtPoint(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle,
+    //     (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
+    // {
+    //     (float u, float v) = Rasterize(Q, triangle);
+    //
+    //     return colorQ;
+    // }
+
     private Vector2 ProjectTo2D(Vertex vertex, float c)
     {
         float x = vertex.Position.X * c + c;
@@ -135,7 +136,10 @@ public class Rasterizer
         Vector4 transformedPosition = Vector4.Transform(v.Position, MVP);
         Vector3 tranformedWorldCoords = Vector3.Transform(v.WorldCoordinates, M);
         Vector3 transformedNormal = Vector3.TransformNormal(v.Normal, CalculateNormalMatrix(M));
-        return v with { Position = transformedPosition, WorldCoordinates = tranformedWorldCoords, Normal = transformedNormal };
+        return v with
+        {
+            Position = transformedPosition, WorldCoordinates = tranformedWorldCoords, Normal = transformedNormal
+        };
     }
     
     public Matrix4x4 CalculateNormalMatrix(Matrix4x4 M)
