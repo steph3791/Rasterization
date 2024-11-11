@@ -66,15 +66,16 @@ public class Rasterizer
             var boundingCoords = GetBoundingCoordinates(posA, posB, posC);
 
             //Rasterize pixels of triangle
-            Parallel.For(boundingCoords.minY, boundingCoords.maxY + 1, y =>
+            if (!isBackFacing(posA, posB, posC))
             {
-                for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
+                Parallel.For(boundingCoords.minY, boundingCoords.maxY + 1, y =>
                 {
-                    var uv = Rasterize(new Vector2(x, y), (posA, posB, posC));
-                    if (uv.u >= 0 && uv.v >= 0 && (uv.u + uv.v) < 1)
+                    for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
                     {
-                        if (!isBackFacing(posA, posB, posC))
+                        var uv = Rasterize(new Vector2(x, y), (posA, posB, posC));
+                        if (uv.u >= 0 && uv.v >= 0 && (uv.u + uv.v) < 1)
                         {
+             
                             int index = y * (_sizeX * 3) + x * 3;
                             Vector3 color = GetColorAtPoint(new Vector2(x,y), (posA, posB, posC) , (a.Color, b.Color, c.Color));
                             pixels[index] =  (byte)Math.Clamp(color.X * 255, 0, 255);
@@ -82,8 +83,9 @@ public class Rasterizer
                             pixels[index + 2] = (byte)Math.Clamp(color.Z * 255, 0, 255);
                         }
                     }
-                }
-            });
+                
+                });
+            }
         }
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), pixels, _sizeX * 3, 0);
         return bitmap;
