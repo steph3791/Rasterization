@@ -73,13 +73,20 @@ public class Rasterizer
                     for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
                     {
                         Vertex Q = new Vertex(new Vector3(x, y, 0), Vector3.Zero, new Vector2(0, 0), -Vector3.UnitZ);
+                        //TODO: Use projected Vertex Positions or Vertices, WorldCoords or Positions? posA vs Vertex a?
                         Q = Rasterize(Q, (posA, posB, posC), (a.Color, b.Color, c.Color));
+                        
+                        //TODO: What is znear / zfar? Equal to near and far of perspective Matrix? (L39)
+                        float z = far * near / (far + (near - far) * Q.Position.Z);
+                        Q = z * Q;
+                        
+                        Vector3 color = FragmentShader(Q); //TODO implement diffuse/specular
                         if (Q.ST.X >= 0 && Q.ST.Y >= 0 && (Q.ST.X + Q.ST.Y) < 1)
                         {
                             int index = y * (_sizeX * 3) + x * 3;
-                            pixels[index] = (byte) Math.Clamp(Q.Color.X * 255, 0, 255);
-                            pixels[index + 1] = (byte) Math.Clamp(Q.Color.Y * 255, 0, 255);
-                            pixels[index + 2] = (byte) Math.Clamp(Q.Color.Z * 255, 0, 255);
+                            pixels[index] = (byte) Math.Clamp(color.X * 255, 0, 255);
+                            pixels[index + 1] = (byte) Math.Clamp(color.Y * 255, 0, 255);
+                            pixels[index + 2] = (byte) Math.Clamp(color.Z * 255, 0, 255);
                         }
                     }
                 });
@@ -91,6 +98,7 @@ public class Rasterizer
 
     private Vertex Rasterize(Vertex Q, (Vector2 a, Vector2 b, Vector2 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
     {
+        //TODO: Should it be Vertex B - Vertex A instead of 2D Vectors?
         Vector2 AB = triangle.b - triangle.a;
         Vector2 AC = triangle.c - triangle.a;
         Vector2 AQ = new Vector2(Q.Position.X - triangle.a.X, Q.Position.Y - triangle.a.Y);
@@ -107,17 +115,15 @@ public class Rasterizer
         
         Vector3 colorQ = u * colors.colorB + v * colors.colorC + (1 - u - v) * colors.colorA;
 
+        //TODO: What is ST in Vertex Class? = u, v? = Barycentric Coordinates?
         Vertex newQ = Q with {ST = new Vector2(u, v), Color = colorQ};
         return newQ;
     }
 
-    // private Vector3 GetColorAtPoint(Vector2 Q, (Vector2 a, Vector2 b, Vector2 c) triangle,
-    //     (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
-    // {
-    //     (float u, float v) = Rasterize(Q, triangle);
-    //
-    //     return colorQ;
-    // }
+    private Vector3 FragmentShader(Vertex Q)
+    {
+        return Q.Color;
+    }
 
     private Vector2 ProjectTo2D(Vertex vertex, float c)
     {
