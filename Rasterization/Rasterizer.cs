@@ -53,10 +53,12 @@ public class Rasterizer
             Vector3 posB = ProjectTo2D(b, _sizeX / 2f);
             Vector3 posC = ProjectTo2D(c, _sizeX / 2f);
 
+            var boundingCoords = GetBoundingCoordinates(posA, posB, posC);
+
             //Rasterize pixels of triangle
-            Parallel.For(0, _sizeY, y =>
+            Parallel.For(boundingCoords.minY, boundingCoords.maxY + 1, y =>
             {
-                for (int x = 0; x < _sizeX; x++)
+                for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
                 {
                     var uv = Rasterize(new Vector2(x, y), (posA, posB, posC));
                     if (uv.u >= 0 && uv.v >= 0 && (uv.u + uv.v) < 1)
@@ -160,5 +162,16 @@ public class Rasterizer
         Vector3 AC = new Vector3(c.X - a.X, c.Y - a.Y, 0);
 
         return Vector3.Cross(AB, AC).Z > 0;
+    }
+
+    private (int minX, int maxX, int minY, int maxY) GetBoundingCoordinates(Vector3 a, Vector3 b, Vector3 c)
+    {
+        int minX = (int) MathF.Min(a.X, MathF.Min(b.X, c.X));
+        int minY = (int) MathF.Min(a.Y, MathF.Min(b.Y, c.Y));
+        int maxX = (int) MathF.Max(a.X, MathF.Max(b.X, c.X));
+        int maxY = (int) MathF.Max(a.Y, MathF.Max(b.Y, c.Y));
+
+        return (minX, maxX, minY, maxY);
+
     }
 }
