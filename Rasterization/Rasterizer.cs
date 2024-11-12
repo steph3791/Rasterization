@@ -46,6 +46,8 @@ public class Rasterizer
         _lightSources.Add(new Light(new Vector3(2,1,-1),new Vector3(1,0,0 )));
         
     }
+    
+    public 
 
     public WriteableBitmap Render()
     {
@@ -56,6 +58,7 @@ public class Rasterizer
             _zBuffer[i] = new float[_sizeY];
             _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
         }
+        
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
 

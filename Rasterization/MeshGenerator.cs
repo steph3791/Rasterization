@@ -25,13 +25,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 public class MeshGenerator
 {
-    public static void AddCube(List<Vertex> _vertices, List<(int A, int B, int C)> _tris, Vector3 _colorFront, Vector3 _colorBack, Vector3 _colorTop, Vector3 _colorBottom, Vector3 _colorRight, Vector3 _colorLeft)
+    public static void AddSingleColorCube(List<Vertex> _vertices, List<(int A, int B, int C)> _tris,
+        Vector3 _colorFront)
+    {
+        AddCube(_vertices, _tris,
+            _colorFront,
+            _colorFront,
+            _colorFront,
+            _colorFront,
+            _colorFront,
+            _colorFront
+        );
+    }
+
+    public static void AddCube(List<Vertex> _vertices, List<(int A, int B, int C)> _tris, Vector3 _colorFront,
+        Vector3 _colorBack, Vector3 _colorTop, Vector3 _colorBottom, Vector3 _colorRight, Vector3 _colorLeft)
     {
         //front
         _vertices.Add(new Vertex(new Vector3(-1, -1, -1), _colorFront, new Vector2(0, 0), -Vector3.UnitZ));
@@ -82,78 +94,83 @@ public class MeshGenerator
         _tris.Add((_vertices.Count - 4, _vertices.Count - 2, _vertices.Count - 1));
     }
 
-    public static void AddSphere(List<Vertex> _vertices, List<(int A, int B, int C)> _tris, int _patches, Vector3 _color)
+    public static void AddSphere(List<Vertex> _vertices, List<(int A, int B, int C)> _tris, int _patches,
+        Vector3 _color)
     {
         for (var x = 0; x < _patches; x++)
-            for (var y = 0; y < _patches; y++)
+        for (var y = 0; y < _patches; y++)
+        {
+            var x1 = (x * 2f / _patches) - 1f;
+            var x2 = ((x + 1) * 2f / _patches) - 1f;
+            var y1 = (y * 2f / _patches) - 1f;
+            var y2 = ((y + 1) * 2f / _patches) - 1f;
+
+            AddPatch(new Vector3(x1, y1, -1),
+                new Vector3(x2, y1, -1),
+                new Vector3(x2, y2, -1),
+                new Vector3(x1, y2, -1), false);
+            AddPatch(new Vector3(x1, y1, 1),
+                new Vector3(x2, y1, 1),
+                new Vector3(x2, y2, 1),
+                new Vector3(x1, y2, 1), true);
+            AddPatch(new Vector3(x1, -1, y1),
+                new Vector3(x2, -1, y1),
+                new Vector3(x2, -1, y2),
+                new Vector3(x1, -1, y2), true);
+            AddPatch(new Vector3(x1, 1, y1),
+                new Vector3(x2, 1, y1),
+                new Vector3(x2, 1, y2),
+                new Vector3(x1, 1, y2), false);
+            AddPatch(new Vector3(-1, x1, y1),
+                new Vector3(-1, x2, y1),
+                new Vector3(-1, x2, y2),
+                new Vector3(-1, x1, y2), false);
+            AddPatch(new Vector3(1, x1, y1),
+                new Vector3(1, x2, y1),
+                new Vector3(1, x2, y2),
+                new Vector3(1, x1, y2), true);
+
+            void AddPatch(Vector3 _p1, Vector3 _p2, Vector3 _p3, Vector3 _p4, bool _flipNormal)
             {
-                var x1 = (x * 2f / _patches) - 1f;
-                var x2 = ((x + 1) * 2f / _patches) - 1f;
-                var y1 = (y * 2f / _patches) - 1f;
-                var y2 = ((y + 1) * 2f / _patches) - 1f;
+                var n1 = Vector3.Normalize(_p1);
+                var n2 = Vector3.Normalize(_p2);
+                var n3 = Vector3.Normalize(_p3);
+                var n4 = Vector3.Normalize(_p4);
 
-                AddPatch(new Vector3(x1, y1, -1),
-                         new Vector3(x2, y1, -1),
-                         new Vector3(x2, y2, -1),
-                         new Vector3(x1, y2, -1), false);
-                AddPatch(new Vector3(x1, y1, 1),
-                         new Vector3(x2, y1, 1),
-                         new Vector3(x2, y2, 1),
-                         new Vector3(x1, y2, 1), true);
-                AddPatch(new Vector3(x1, -1, y1),
-                         new Vector3(x2, -1, y1),
-                         new Vector3(x2, -1, y2),
-                         new Vector3(x1, -1, y2), true);
-                AddPatch(new Vector3(x1, 1, y1),
-                         new Vector3(x2, 1, y1),
-                         new Vector3(x2, 1, y2),
-                         new Vector3(x1, 1, y2), false);
-                AddPatch(new Vector3(-1, x1, y1),
-                         new Vector3(-1, x2, y1),
-                         new Vector3(-1, x2, y2),
-                         new Vector3(-1, x1, y2), false);
-                AddPatch(new Vector3(1, x1, y1),
-                         new Vector3(1, x2, y1),
-                         new Vector3(1, x2, y2),
-                         new Vector3(1, x1, y2), true);
+                static Vector2 ToTex(Vector3 p) => new Vector2((float)(Math.Atan2(p.X, p.Y) / Math.PI / 2) + 0.5f,
+                    (float)(Math.Acos(p.Z) / Math.PI));
 
-                void AddPatch(Vector3 _p1, Vector3 _p2, Vector3 _p3, Vector3 _p4, bool _flipNormal)
+                var t1 = ToTex(n1);
+                var t2 = ToTex(n2);
+                var t3 = ToTex(n3);
+                var t4 = ToTex(n4);
+                if (t1.X > 0.75f || t2.X > 0.75f || t3.X > 0.75f || t4.X > 0.75f)
                 {
-                    var n1 = Vector3.Normalize(_p1);
-                    var n2 = Vector3.Normalize(_p2);
-                    var n3 = Vector3.Normalize(_p3);
-                    var n4 = Vector3.Normalize(_p4);
-                    static Vector2 ToTex(Vector3 p) => new Vector2((float)(Math.Atan2(p.X, p.Y) / Math.PI / 2) + 0.5f, (float)(Math.Acos(p.Z) / Math.PI));
-                    var t1 = ToTex(n1);
-                    var t2 = ToTex(n2);
-                    var t3 = ToTex(n3);
-                    var t4 = ToTex(n4);
-                    if (t1.X > 0.75f || t2.X > 0.75f || t3.X > 0.75f || t4.X > 0.75f)
-                    {
-                        if (t1.X < 0.25f)
-                            t1.X++;
-                        if (t2.X < 0.25f)
-                            t2.X++;
-                        if (t3.X < 0.25f)
-                            t3.X++;
-                        if (t4.X < 0.25f)
-                            t4.X++;
-                    }
-                    _vertices.Add(new Vertex(n1, _color, t1, n1));
-                    _vertices.Add(new Vertex(n2, _color, t2, n2));
-                    _vertices.Add(new Vertex(n3, _color, t3, n3));
-                    _vertices.Add(new Vertex(n4, _color, t4, n4));
-                    if (_flipNormal)
-                    {
-                        _tris.Add((_vertices.Count - 3, _vertices.Count - 4, _vertices.Count - 2));
-                        _tris.Add((_vertices.Count - 2, _vertices.Count - 4, _vertices.Count - 1));
-                    }
-                    else
-                    {
-                        _tris.Add((_vertices.Count - 4, _vertices.Count - 3, _vertices.Count - 2));
-                        _tris.Add((_vertices.Count - 4, _vertices.Count - 2, _vertices.Count - 1));
-                    }
+                    if (t1.X < 0.25f)
+                        t1.X++;
+                    if (t2.X < 0.25f)
+                        t2.X++;
+                    if (t3.X < 0.25f)
+                        t3.X++;
+                    if (t4.X < 0.25f)
+                        t4.X++;
+                }
+
+                _vertices.Add(new Vertex(n1, _color, t1, n1));
+                _vertices.Add(new Vertex(n2, _color, t2, n2));
+                _vertices.Add(new Vertex(n3, _color, t3, n3));
+                _vertices.Add(new Vertex(n4, _color, t4, n4));
+                if (_flipNormal)
+                {
+                    _tris.Add((_vertices.Count - 3, _vertices.Count - 4, _vertices.Count - 2));
+                    _tris.Add((_vertices.Count - 2, _vertices.Count - 4, _vertices.Count - 1));
+                }
+                else
+                {
+                    _tris.Add((_vertices.Count - 4, _vertices.Count - 3, _vertices.Count - 2));
+                    _tris.Add((_vertices.Count - 4, _vertices.Count - 2, _vertices.Count - 1));
                 }
             }
+        }
     }
 }
