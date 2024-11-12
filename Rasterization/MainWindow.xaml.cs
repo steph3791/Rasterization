@@ -46,14 +46,21 @@ public partial class MainWindow : Window
 
     private void CreateMesh()
     {
+        // MeshGenerator.AddCube(_vertices, _tris,
+        //     new Vector3(1, 0, 0),
+        //     new Vector3(0, 1, 0),
+        //     new Vector3(0, 0, 1),
+        //     new Vector3(0, 0, 0),
+        //     new Vector3(1, 1, 0),
+        //     new Vector3(1, 0, 1));
         MeshGenerator.AddCube(_vertices, _tris,
-            new Vector3(1, 0, 0),
-            new Vector3(0, 1, 0),
-            new Vector3(0, 0, 1),
-            new Vector3(0, 0, 0),
-            new Vector3(1, 1, 0),
-            new Vector3(1, 0, 1));
-        // MeshGenerator.AddSphere(_vertices,_tris, 20, new Vector3(0, 0, 1));
+            new Vector3(0,1,0),
+            new Vector3(0,1,0),
+            new Vector3(0,1,0),
+            new Vector3(0,1,0),
+            new Vector3(0,1,0),
+            new Vector3(0,1,0));
+        // MeshGenerator.AddSphere(_vertices,_tris, 3, new Vector3(0, 0, 1));
     }
     
 

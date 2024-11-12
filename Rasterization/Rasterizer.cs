@@ -33,7 +33,9 @@ public class Rasterizer
         _camera = new Vector3(0, 0, -4);
         
         _lightSources = new List<Light>();
-        _lightSources.Add(new Light(new Vertex(new Vector4(0,0,0,1), new Vector3(-1,3,1),new Vector3(1,1,1), new Vector2(0,0), -Vector3.UnitZ), 20));
+        _lightSources.Add(new Light(new Vector3(-2,1,-1),new Vector3(1,1,1)));
+        _lightSources.Add(new Light(new Vector3(2,1,-1),new Vector3(1,0,0 )));
+        
     }
 
     public WriteableBitmap Render()
@@ -42,6 +44,8 @@ public class Rasterizer
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
         
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
+        // var M2 = Matrix4x4.CreateRotationX(float.DegreesToRadians(-25f));
+        // M *= M2;
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
 
         float near = 0.1f;
@@ -122,37 +126,48 @@ public class Rasterizer
 
     private Vector3 FragmentShader(Vertex Q)
     {
+        Vector3 ambientLightColor = new Vector3(0.1f, 0.1f, 0.1f); // Adjust as needed
+        Vector3 ambient = ambientLightColor * Q.Color;
+        
         Vector3 color = Vector3.Zero;
-        Vector3 diffuseIllumination = Vector3.Zero;
-        Vector3 specularIllumination = Vector3.Zero;
+        Vector3 n = Vector3.Normalize(Q.Normal);
+        Vector3 viewDir = Vector3.Normalize(_camera - Q.WorldCoordinates);
+
         for (int i = 0; i < _lightSources.Count; i++)
         {
             Light light = _lightSources[i];
-            Vertex lightSource = light.vertex;
+            Vector3 lightPos = light.position;
+            Vector3 lightDir = Vector3.Normalize(lightPos - Q.WorldCoordinates);
             
-            Vector3 ql = lightSource.WorldCoordinates - Q.WorldCoordinates;
-            float cos = Vector3.Dot(Q.Normal, ql);
+            // Diffuse component
+            float cos = Vector3.Dot(n, lightDir);
+
+            Vector3 diffuseIllumination = Vector3.Zero;
             if (cos > 0)
             {
-                diffuseIllumination = lightSource.Color * Q.Color * cos;
+                diffuseIllumination = light.color * Q.Color * cos;
             }
 
-            Vector3 reflected = Vector3.Reflect(lightSource.WorldCoordinates, Q.Normal);
-            Vector3 qe = _camera - Q.WorldCoordinates;
-            float cosReflected = Vector3.Dot(qe, reflected);
-            if (cos > 0 && cosReflected >0)
+            // Specular component
+            Vector3 reflectDir = Vector3.Reflect(-lightDir, n);
+            float cosReflected = Vector3.Dot(reflectDir, viewDir);
+            Vector3 specularIllumination = Vector3.Zero;
+            if (cos>0&& cosReflected > 1-0.01f)
             {
-                specularIllumination = lightSource.Color * Q.Color * MathF.Pow(cosReflected,100);
+                float specularStrength = MathF.Pow(cosReflected, 40);
+                specularIllumination = light.color * specularStrength;
             }
             color += diffuseIllumination + specularIllumination;
         }
+        color += ambient;
         return color;
     }
 
     private Vertex TransformQToCameraSpace(Vertex Q, float near, float far, Matrix4x4 M, Matrix4x4 MVP)
     {
-        Q = VertexShader(Q, M, MVP);
-        Q = Project(Q);
+        // Q = VertexShader(Q, M, MVP);
+        // Q = Project(Q);
+        // Q = ProjectTo2D(Q, _sizeX / 2);
         float z = far * near / (far + (near - far) * Q.Position.Z);
         return z * Q;
     }
@@ -176,7 +191,7 @@ public class Rasterizer
         Vector3 transformedNormal = Vector3.TransformNormal(v.Normal, CalculateNormalMatrix(M));
         return v with
         {
-            Position = transformedPosition, WorldCoordinates = tranformedWorldCoords, Normal = transformedNormal
+            Position = transformedPosition, WorldCoordinates = tranformedWorldCoords, Normal = Vector3.Normalize(transformedNormal)
         };
     }
 
