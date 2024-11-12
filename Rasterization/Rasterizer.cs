@@ -40,8 +40,10 @@ public class Rasterizer
         float far = 100f;
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var MVP = M * V * P;
-        
-        _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
+        if (Config.Animate)
+        {
+            _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
+        }
         for (int i = 0; i < _tris.Count; i++)
         {
             //Vertices A,B,C
