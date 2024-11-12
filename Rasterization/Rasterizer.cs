@@ -40,7 +40,7 @@ public class Rasterizer
         float far = 100f;
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var MVP = M * V * P;
-        if (Config.Animate)
+        if (Config.Animate) 
         {
             _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
         }
@@ -61,65 +61,54 @@ public class Rasterizer
             b = Project(b);
             c = Project(c);
 
-            Vector2 posA = ProjectTo2D(a, _sizeX / 2f);
-            Vector2 posB = ProjectTo2D(b, _sizeX / 2f);
-            Vector2 posC = ProjectTo2D(c, _sizeX / 2f);
+            Vertex a2D = ProjectTo2D(a, _sizeX / 2f);
+            Vertex b2D = ProjectTo2D(b, _sizeX / 2f);
+            Vertex c2D = ProjectTo2D(c, _sizeX / 2f);
 
-            var boundingCoords = GetBoundingCoordinates(posA, posB, posC);
+            var boundingCoords = GetBoundingCoordinates(a2D.Position, b2D.Position, c2D.Position);
 
-            //Rasterize pixels of triangle
-            if (!isBackFacing(posA, posB, posC))
+            Vertex ab = b2D - a2D;
+            Vertex ac = c2D - a2D;
+
+            if (!isBackFacing(a2D.Position, b2D.Position, c2D.Position))
             {
                 Parallel.For(boundingCoords.minY, boundingCoords.maxY + 1, y =>
                 {
                     for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
                     {
-                        Vertex Q = new Vertex(new Vector3(x, y, 0), Vector3.Zero, new Vector2(0, 0), -Vector3.UnitZ);
-                        //TODO: Use projected Vertex Positions or Vertices, WorldCoords or Positions? posA vs Vertex a?
-                        Q = Rasterize(Q, (posA, posB, posC), (a.Color, b.Color, c.Color));
-                        
-                        //TODO: What is znear / zfar? Equal to near and far of perspective Matrix? (L39)
-                        float z = far * near / (far + (near - far) * Q.Position.Z);
-                        Q = z * Q;
-                        
-                        Vector3 color = FragmentShader(Q); //TODO implement diffuse/specular
-                        if (Q.ST.X >= 0 && Q.ST.Y >= 0 && (Q.ST.X + Q.ST.Y) < 1)
+                        Vector2 AQ = new Vector2(x - a2D.Position.X, y - a2D.Position.Y);
+                        var (u, v) = GetBarycentricCoordinates(AQ, ab, ac);
+                        if (u >= 0 && v >= 0 && (u + v) < 1)
                         {
+                            Vertex Q = a + u * ab + v * ac;
+                            Q = TransformQToCameraSpace(Q, near, far, M, MVP);
+                            Vector3 color = FragmentShader(Q);
                             int index = y * (_sizeX * 3) + x * 3;
-                            pixels[index] = (byte) Math.Clamp(color.X * 255, 0, 255);
-                            pixels[index + 1] = (byte) Math.Clamp(color.Y * 255, 0, 255);
-                            pixels[index + 2] = (byte) Math.Clamp(color.Z * 255, 0, 255);
+                            pixels[index] = (byte)Math.Clamp(color.X * 255, 0, 255);
+                            pixels[index + 1] = (byte)Math.Clamp(color.Y * 255, 0, 255);
+                            pixels[index + 2] = (byte)Math.Clamp(color.Z * 255, 0, 255);
                         }
                     }
                 });
             }
         }
+
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), pixels, _sizeX * 3, 0);
         return bitmap;
     }
 
-    private Vertex Rasterize(Vertex Q, (Vector2 a, Vector2 b, Vector2 c) triangle, (Vector3 colorA, Vector3 colorB, Vector3 colorC) colors)
+    private (float u, float v) GetBarycentricCoordinates(Vector2 AQ, Vertex AB, Vertex AC)
     {
-        //TODO: Should it be Vertex B - Vertex A instead of 2D Vectors?
-        Vector2 AB = triangle.b - triangle.a;
-        Vector2 AC = triangle.c - triangle.a;
-        Vector2 AQ = new Vector2(Q.Position.X - triangle.a.X, Q.Position.Y - triangle.a.Y);
+        float matrix00 = AC.Position.Y;
+        float matrix01 = -AC.Position.X;
+        float matrix10 = -AB.Position.Y;
+        float matrix11 = AB.Position.X;
 
-        float matrix00 = AC.Y;
-        float matrix01 = -AC.X;
-        float matrix10 = -AB.Y;
-        float matrix11 = AB.X;
-
-        float factor1 = 1f / (AB.X * AC.Y - AB.Y * AC.X);
+        float factor1 = 1f / (AB.Position.X * AC.Position.Y - AB.Position.Y * AC.Position.X);
 
         float u = factor1 * (matrix00 * AQ.X + matrix01 * AQ.Y);
         float v = factor1 * (matrix10 * AQ.X + matrix11 * AQ.Y);
-        
-        Vector3 colorQ = u * colors.colorB + v * colors.colorC + (1 - u - v) * colors.colorA;
-
-        //TODO: What is ST in Vertex Class? = u, v? = Barycentric Coordinates?
-        Vertex newQ = Q with {ST = new Vector2(u, v), Color = colorQ};
-        return newQ;
+        return (u, v);
     }
 
     private Vector3 FragmentShader(Vertex Q)
@@ -127,18 +116,26 @@ public class Rasterizer
         return Q.Color;
     }
 
-    private Vector2 ProjectTo2D(Vertex vertex, float c)
+    private Vertex TransformQToCameraSpace(Vertex Q, float near, float far, Matrix4x4 M, Matrix4x4 MVP)
+    {
+        Q = VertexShader(Q, M, MVP);
+        Q = Project(Q);
+        float z = far * near / (far + (near - far) * Q.Position.Z);
+        return z * Q;
+    }
+
+    private Vertex ProjectTo2D(Vertex vertex, float c)
     {
         float x = vertex.Position.X * c + c;
         float y = vertex.Position.Y * c + _sizeY / 2;
-        return new Vector2(x, y);
+        return vertex with { Position = vertex.Position with { X = x, Y = y } };
     }
 
     private Vertex Project(Vertex v)
     {
         return (1f / v.Position.W) * v;
     }
-    
+
     private Vertex VertexShader(Vertex v, Matrix4x4 M, Matrix4x4 MVP)
     {
         Vector4 transformedPosition = Vector4.Transform(v.Position, MVP);
@@ -149,7 +146,7 @@ public class Rasterizer
             Position = transformedPosition, WorldCoordinates = tranformedWorldCoords, Normal = transformedNormal
         };
     }
-    
+
     public Matrix4x4 CalculateNormalMatrix(Matrix4x4 M)
     {
         float detM = M.GetDeterminant();
@@ -157,13 +154,14 @@ public class Rasterizer
         {
             throw new InvalidOperationException("Matrix is not invertible, cannot compute normal matrix.");
         }
+
         Matrix4x4 inverseTransposed = Matrix4x4.Transpose(inverse);
         Matrix4x4 normal = inverseTransposed * detM;
 
         return normal;
     }
 
-    private bool isBackFacing(Vector2 a, Vector2 b, Vector2 c)
+    private bool isBackFacing(Vector4 a, Vector4 b, Vector4 c)
     {
         Vector3 AB = new Vector3(b.X - a.X, b.Y - a.Y, 0);
         Vector3 AC = new Vector3(c.X - a.X, c.Y - a.Y, 0);
@@ -171,14 +169,13 @@ public class Rasterizer
         return Vector3.Cross(AB, AC).Z > 0;
     }
 
-    private (int minX, int maxX, int minY, int maxY) GetBoundingCoordinates(Vector2 a, Vector2 b, Vector2 c)
+    private (int minX, int maxX, int minY, int maxY) GetBoundingCoordinates(Vector4 a, Vector4 b, Vector4 c)
     {
-        int minX = (int) MathF.Min(a.X, MathF.Min(b.X, c.X));
-        int minY = (int) MathF.Min(a.Y, MathF.Min(b.Y, c.Y));
-        int maxX = (int) MathF.Max(a.X, MathF.Max(b.X, c.X));
-        int maxY = (int) MathF.Max(a.Y, MathF.Max(b.Y, c.Y));
+        int minX = (int)MathF.Min(a.X, MathF.Min(b.X, c.X));
+        int minY = (int)MathF.Min(a.Y, MathF.Min(b.Y, c.Y));
+        int maxX = (int)MathF.Max(a.X, MathF.Max(b.X, c.X));
+        int maxY = (int)MathF.Max(a.Y, MathF.Max(b.Y, c.Y));
 
         return (minX, maxX, minY, maxY);
-
     }
 }
