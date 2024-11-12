@@ -23,6 +23,8 @@ public class Rasterizer
 
     private Vector3 _camera;
 
+    private float[][] _zBuffer;
+
     public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris, Animator animator)
     {
         _sizeX = sizeX;
@@ -31,6 +33,13 @@ public class Rasterizer
         _tris = tris;
         _animator = animator;
         _camera = new Vector3(0, 0, -4);
+        _zBuffer = new float[_sizeX][];
+
+        for (int i = 0; i < _zBuffer.Length; i++)
+        {
+            _zBuffer[i] = new float[_sizeY];
+            _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
+        }
         
         _lightSources = new List<Light>();
         _lightSources.Add(new Light(new Vector3(-2,1,-1),new Vector3(1,1,1)));
@@ -42,10 +51,12 @@ public class Rasterizer
     {
         var bitmap = new WriteableBitmap(_sizeX, _sizeY, 96, 96, PixelFormats.Rgb24, null);
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
-        
+        for (int i = 0; i < _zBuffer.Length; i++)
+        {
+            _zBuffer[i] = new float[_sizeY];
+            _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
+        }
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
-        // var M2 = Matrix4x4.CreateRotationX(float.DegreesToRadians(-25f));
-        // M *= M2;
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
 
         float near = 0.1f;
@@ -78,13 +89,11 @@ public class Rasterizer
             Vertex b2D = ProjectTo2D(b, _sizeX / 2f);
             Vertex c2D = ProjectTo2D(c, _sizeX / 2f);
             
-            var boundingCoords = GetBoundingCoordinates(a2D.Position, b2D.Position, c2D.Position);
-
-            Vertex ab = b2D - a2D;
-            Vertex ac = c2D - a2D;
-
             if (!isBackFacing(a2D.Position, b2D.Position, c2D.Position))
             {
+                Vertex ab = b2D - a2D;
+                Vertex ac = c2D - a2D;
+                var boundingCoords = GetBoundingCoordinates(a2D.Position, b2D.Position, c2D.Position);
                 Parallel.For(boundingCoords.minY, boundingCoords.maxY + 1, y =>
                 {
                     for (int x = boundingCoords.minX; x <= boundingCoords.maxX; x++)
@@ -95,11 +104,15 @@ public class Rasterizer
                         {
                             Vertex Q = a + u * ab + v * ac;
                             Q = TransformQToCameraSpace(Q, near, far, M, MVP);
-                            Vector3 color = FragmentShader(Q);
-                            int index = y * (_sizeX * 3) + x * 3;
-                            pixels[index] = (byte)Math.Clamp(color.X * 255, 0, 255);
-                            pixels[index + 1] = (byte)Math.Clamp(color.Y * 255, 0, 255);
-                            pixels[index + 2] = (byte)Math.Clamp(color.Z * 255, 0, 255);
+                            if (_zBuffer[x][y] > Q.Position.Z)
+                            {
+                                _zBuffer[x][y] = Q.Position.Z;
+                                Vector3 color = FragmentShader(Q);
+                                int index = y * (_sizeX * 3) + x * 3;
+                                pixels[index] = (byte)Math.Clamp(color.X * 255, 0, 255);
+                                pixels[index + 1] = (byte)Math.Clamp(color.Y * 255, 0, 255);
+                                pixels[index + 2] = (byte)Math.Clamp(color.Z * 255, 0, 255);
+                            }
                         }
                     }
                 });
