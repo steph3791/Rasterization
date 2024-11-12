@@ -2,5 +2,5 @@
 
 public class Config
 {
-    public static bool Animate = false;
+    public static bool Animate = true;
 }

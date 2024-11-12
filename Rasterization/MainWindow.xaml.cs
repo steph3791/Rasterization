@@ -28,10 +28,12 @@ public partial class MainWindow : Window
     
     public MainWindow()
     {
-        CompositionTarget.Rendering += (sender, args) => { CreateMesh(); };
+        CompositionTarget.Rendering += (sender, args) =>
+        {
+            CreateMesh();
+        };
         InitializeComponent();
         Width = Height = Size;
-        CreateMesh();
 
         _animator = new Animator(16);
         _rasterizer = new Rasterizer(Size, Size, _vertices, _tris, _animator);
@@ -51,7 +53,9 @@ public partial class MainWindow : Window
             new Vector3(0, 0, 0),
             new Vector3(1, 1, 0),
             new Vector3(1, 0, 1));
+        // MeshGenerator.AddSphere(_vertices,_tris, 20, new Vector3(0, 0, 1));
     }
+    
 
     private void Render()
     {

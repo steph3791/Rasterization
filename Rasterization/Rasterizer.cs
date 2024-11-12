@@ -15,9 +15,13 @@ public class Rasterizer
     List<Vertex> _vertices;
     List<(int A, int B, int C)> _tris;
 
+    private List<Light> _lightSources;
+
     private Animator _animator;
     private float _rotationDegrees = 45f;
     private float _rotationSpeed = 0.05f;
+
+    private Vector3 _camera;
 
     public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris, Animator animator)
     {
@@ -26,6 +30,10 @@ public class Rasterizer
         _vertices = vertices;
         _tris = tris;
         _animator = animator;
+        _camera = new Vector3(0, 0, -4);
+        
+        _lightSources = new List<Light>();
+        _lightSources.Add(new Light(new Vertex(new Vector4(0,0,0,1), new Vector3(-1,3,1),new Vector3(1,1,1), new Vector2(0,0), -Vector3.UnitZ), 20));
     }
 
     public WriteableBitmap Render()
@@ -34,12 +42,13 @@ public class Rasterizer
         byte[] pixels = new byte[_sizeX * _sizeY * 3];
         
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
-        var V = Matrix4x4.CreateLookAt(new Vector3(0, 0, -4), Vector3.Zero, new Vector3(0, -1, 0));
+        var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
 
         float near = 0.1f;
         float far = 100f;
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var MVP = M * V * P;
+        
         if (Config.Animate) 
         {
             _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
@@ -55,16 +64,16 @@ public class Rasterizer
             a = VertexShader(a, M, MVP);
             b = VertexShader(b, M, MVP);
             c = VertexShader(c, M, MVP);
-            
+
             //Project vertices through Scaling with 1/position.w
             a = Project(a);
             b = Project(b);
             c = Project(c);
-
+            
             Vertex a2D = ProjectTo2D(a, _sizeX / 2f);
             Vertex b2D = ProjectTo2D(b, _sizeX / 2f);
             Vertex c2D = ProjectTo2D(c, _sizeX / 2f);
-
+            
             var boundingCoords = GetBoundingCoordinates(a2D.Position, b2D.Position, c2D.Position);
 
             Vertex ab = b2D - a2D;
@@ -113,7 +122,31 @@ public class Rasterizer
 
     private Vector3 FragmentShader(Vertex Q)
     {
-        return Q.Color;
+        Vector3 color = Vector3.Zero;
+        Vector3 diffuseIllumination = Vector3.Zero;
+        Vector3 specularIllumination = Vector3.Zero;
+        for (int i = 0; i < _lightSources.Count; i++)
+        {
+            Light light = _lightSources[i];
+            Vertex lightSource = light.vertex;
+            
+            Vector3 ql = lightSource.WorldCoordinates - Q.WorldCoordinates;
+            float cos = Vector3.Dot(Q.Normal, ql);
+            if (cos > 0)
+            {
+                diffuseIllumination = lightSource.Color * Q.Color * cos;
+            }
+
+            Vector3 reflected = Vector3.Reflect(lightSource.WorldCoordinates, Q.Normal);
+            Vector3 qe = _camera - Q.WorldCoordinates;
+            float cosReflected = Vector3.Dot(qe, reflected);
+            if (cos > 0 && cosReflected >0)
+            {
+                specularIllumination = lightSource.Color * Q.Color * MathF.Pow(cosReflected,100);
+            }
+            color += diffuseIllumination + specularIllumination;
+        }
+        return color;
     }
 
     private Vertex TransformQToCameraSpace(Vertex Q, float near, float far, Matrix4x4 M, Matrix4x4 MVP)
