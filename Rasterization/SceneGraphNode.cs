@@ -6,7 +6,7 @@ public class SceneGraphNode
 {
     List<Vertex> _vertices = new List<Vertex>();
     List<(int A, int B, int C)> _tris = new List<(int A, int B, int C)>();
-    List<(SceneGraphNode Node, Matrix4x4 Transformation)> _children;
+    List<(SceneGraphNode Node, Matrix4x4 Transformation)> _children = new List<(SceneGraphNode, Matrix4x4)>();
 
     public List<Vertex> Vertices
     {
@@ -25,7 +25,7 @@ public class SceneGraphNode
         get => _children;
         set => _children = value ?? throw new ArgumentNullException(nameof(value));
     }
-
+    
     void Render(Matrix4x4 modelMatrix, Matrix4x4 viewProjectionMatrix, Rasterizer rasterizer)
     {
         var mNormal = rasterizer.CalculateNormalMatrix(modelMatrix);

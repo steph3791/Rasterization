@@ -30,16 +30,14 @@ public partial class MainWindow : Window
     
     public MainWindow()
     {
-        CompositionTarget.Rendering += (sender, args) =>
-        {
-            CreateMesh();
-        };
         InitializeComponent();
         Width = Height = Size;
 
         _animator = new Animator(16);
+        
         RenderObject();
-        RenderSceneGraph();
+        // RenderSceneGraph();
+        
     }
 
     void RenderObject()
@@ -54,6 +52,7 @@ public partial class MainWindow : Window
     {
         _sceneGraphNode = new SceneGraphNode();
         CreateSceneGraph();
+        _rasterizer = new Rasterizer(Size, Size, _sceneGraphNode, _animator);
     }
     
 
