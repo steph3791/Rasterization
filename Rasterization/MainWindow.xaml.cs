@@ -35,8 +35,8 @@ public partial class MainWindow : Window
 
         _animator = new Animator(16);
         
-        RenderObject();
-        // RenderSceneGraph();
+        // RenderObject();
+        RenderSceneGraph();
         
     }
 
@@ -53,6 +53,8 @@ public partial class MainWindow : Window
         _sceneGraphNode = new SceneGraphNode();
         CreateSceneGraph();
         _rasterizer = new Rasterizer(Size, Size, _sceneGraphNode, _animator);
+        _animator.RegisterAnimation(Render);
+        _animator.Start();
     }
     
 
@@ -77,12 +79,13 @@ public partial class MainWindow : Window
 
     private void CreateSceneGraph()
     {
-        SceneGraphNode cube=new SceneGraphNode();
+        
+        SceneGraphNode cube = new SceneGraphNode();
         _sceneGraphNode.Children.Add((cube, CreateTransformation(3f, new Vector3(0,0,0))));
         MeshGenerator.AddSingleColorCube(cube.Vertices, cube.Tris, new Vector3(0,1,0));
 
         SceneGraphNode sphere = new SceneGraphNode();
-        _sceneGraphNode.Children.Add((sphere, CreateTransformation(3f, new Vector3(2,0,0))));
+        _sceneGraphNode.Children.Add((sphere, CreateTransformation(3f, new Vector3(1,0,0))));
         MeshGenerator.AddSphere(sphere.Vertices, sphere.Tris, 4, new Vector3(1,0,0));
     }
 
@@ -90,7 +93,7 @@ public partial class MainWindow : Window
     {
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(rotation));
         var T = Matrix4x4.CreateTranslation(translation);
-        return M * T;
+        return M ;
 
     }
     

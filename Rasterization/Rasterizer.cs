@@ -61,6 +61,7 @@ public class Rasterizer
 
     public WriteableBitmap Render()
     {
+        Console.WriteLine("Rendering");
         var bitmap = new WriteableBitmap(_sizeX, _sizeY, 96, 96, PixelFormats.Rgb24, null);
         _pixels = new byte[_sizeX * _sizeY * 3];
         for (int i = 0; i < _zBuffer.Length; i++)
@@ -82,26 +83,27 @@ public class Rasterizer
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var MVP = M * V * P;
 
-        Render(_vertices, _tris, M, MVP, near, far);
+        if (_sceneGraph != null)
+        {
+            Console.WriteLine("Rendering Scene Graph");
+            RenderSceneGraph(_sceneGraph, M, MVP, near, far);
+        }
+        {
+            Render(_vertices, _tris, M, MVP, near, far);
+        }
 
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
         return bitmap;
     }
 
-    // private byte[] RenderSceneGraph(SceneGraphNode node, Matrix4x4 M, Matrix4x4 MVP, float near, float far)
-    // {
-    //     byte[] pixels = new byte[_sizeX * _sizeY * 3];
-    //     var data = Render(node.Vertices, node.Tris, M, MVP, near, far);
-    //     foreach (var keyValuePair in data)
-    //     {
-    //         pixels[keyValuePair.Key] = keyValuePair.Value;
-    //     }
-    //     foreach (var graph in node.Children)
-    //     {
-    //         pixels = RenderSceneGraph(graph.Node, M, MVP, near, far);
-    //     }
-    //     return pixels;
-    // }
+    private void RenderSceneGraph(SceneGraphNode node, Matrix4x4 M, Matrix4x4 MVP, float near, float far)
+    {
+        Render(node.Vertices, node.Tris, M, MVP, near, far);
+        foreach (var graph in node.Children)
+        {
+            RenderSceneGraph(graph.Node, M, MVP, near, far);
+        }
+    }
 
     /// <summary>
     /// Renders the given vertices to the Screen
@@ -163,20 +165,6 @@ public class Rasterizer
             }
         }
     }
-
-
-    // private WriteableBitmap RenderObject(List<Vertex> vertices, List<(int A, int B, int C)> tris)
-    //     {
-    //         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
-    //         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
-    //         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near,
-    //             far);
-    //         var MVP = M * V * P;
-    //
-    //
-    //         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), pixels, _sizeX * 3, 0);
-    //         return bitmap;
-    //     }
 
     private (float u, float v) GetBarycentricCoordinates(Vector2 AQ, Vertex AB, Vertex AC)
     {
