@@ -56,12 +56,10 @@ public class Rasterizer
     private void CreateLightSources()
     {
         _lightSources.Add(new Light(new Vector3(-2, 1, -1), new Vector3(1, 1, 1)));
-        _lightSources.Add(new Light(new Vector3(2, 1, -1), new Vector3(1, 0, 0)));
     }
 
     public WriteableBitmap Render()
     {
-        Console.WriteLine("Rendering");
         var bitmap = new WriteableBitmap(_sizeX, _sizeY, 96, 96, PixelFormats.Rgb24, null);
         _pixels = new byte[_sizeX * _sizeY * 3];
         for (int i = 0; i < _zBuffer.Length; i++)
@@ -69,7 +67,6 @@ public class Rasterizer
             _zBuffer[i] = new float[_sizeY];
             _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
         }
-
         if (Config.Animate)
         {
             _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
@@ -77,31 +74,30 @@ public class Rasterizer
 
         float near = 0.1f;
         float far = 100f;
-
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
-        var MVP = M * V * P;
+        var VP = V * P;
 
         if (_sceneGraph != null)
         {
-            Console.WriteLine("Rendering Scene Graph");
-            RenderSceneGraph(_sceneGraph, M, MVP, near, far);
+            RenderSceneGraph(_sceneGraph, M, VP, near, far);
         }
         {
-            Render(_vertices, _tris, M, MVP, near, far);
+            Render(_vertices, _tris, M, VP, near, far);
         }
 
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
         return bitmap;
     }
 
-    private void RenderSceneGraph(SceneGraphNode node, Matrix4x4 M, Matrix4x4 MVP, float near, float far)
+    private void RenderSceneGraph(SceneGraphNode node, Matrix4x4 M, Matrix4x4 VP, float near, float far)
     {
-        Render(node.Vertices, node.Tris, M, MVP, near, far);
+        Render(node.Vertices, node.Tris, M, M*VP, near, far);
         foreach (var graph in node.Children)
         {
-            RenderSceneGraph(graph.Node, M, MVP, near, far);
+            var m = graph.Transformation * M;
+            RenderSceneGraph(graph.Node, m, VP, near, far);
         }
     }
 
@@ -150,7 +146,7 @@ public class Rasterizer
                         {
                             Vertex Q = a + u * ab + v * ac;
                             Q = TransformQToCameraSpace(Q, near, far, M, MVP);
-                            if (_zBuffer[x][y] > Q.Position.Z)
+                            if (x < _zBuffer.Length && x>=0 && y < _zBuffer[x].Length && y>=0 && _zBuffer[x][y] > Q.Position.Z)
                             {
                                 _zBuffer[x][y] = Q.Position.Z;
                                 Vector3 color = FragmentShader(Q);

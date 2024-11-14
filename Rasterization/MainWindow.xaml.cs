@@ -85,15 +85,18 @@ public partial class MainWindow : Window
         MeshGenerator.AddSingleColorCube(cube.Vertices, cube.Tris, new Vector3(0,1,0));
 
         SceneGraphNode sphere = new SceneGraphNode();
-        _sceneGraphNode.Children.Add((sphere, CreateTransformation(3f, new Vector3(1,0,0))));
+        _sceneGraphNode.Children.Add((sphere, CreateTransformation(1f, new Vector3(2,0.5f,0))));
         MeshGenerator.AddSphere(sphere.Vertices, sphere.Tris, 4, new Vector3(1,0,0));
+        SceneGraphNode sphere1 = new SceneGraphNode();
+        _sceneGraphNode.Children.Add((sphere1, CreateTransformation(1f, new Vector3(-2f,0.5f,0))));
+        MeshGenerator.AddSphere(sphere1.Vertices, sphere1.Tris, 4, new Vector3(1,0,0));
     }
 
     private Matrix4x4 CreateTransformation(float rotation, Vector3 translation)
     {
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(rotation));
         var T = Matrix4x4.CreateTranslation(translation);
-        return M ;
+        return M*T ;
 
     }
     
