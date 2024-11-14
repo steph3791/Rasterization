@@ -34,4 +34,34 @@ public class SceneGraphNode
         // foreach(var child in Children)
             // child.Node.Render(child.Transformation * modelMatrix, viewProjectionMatrix, rasterizer);
     }   
+    
+    public class TransformationProperty<T>
+    {
+        private T _value;
+        private readonly Func<T, float, (T value, Matrix4x4 matrix)> _animationUpdate;
+
+        public T Value
+        {
+            get => _value;
+            set => _value = value;
+        }
+        
+        // Constructor
+        public TransformationProperty(T value, Func<T, float, (T value, Matrix4x4 matrix)> animationUpdate)
+        {
+            Console.WriteLine("NEw instance");
+            _value = value;
+            _animationUpdate = animationUpdate;
+        }
+
+        public Matrix4x4 GetTransformation(float deltaTime)
+        {
+            var data = _animationUpdate(_value, deltaTime);
+            Console.WriteLine("Value: " + data.value);
+            _value = data.value;
+            Console.WriteLine("NEw Value: " + _value);
+            return data.matrix;
+        }
+    }
+
 }

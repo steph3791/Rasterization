@@ -21,9 +21,13 @@ public class Object
     public SceneGraphNode Node => _node;
 
     public TextureUtil.Texture? Texture => _texture;
-    public AnimatedProperty<object>[]? AnimatedProperties => _animatedProperties;
 
-    
+    public AnimatedProperty<object>[]? AnimatedProperties
+    {
+        get => _animatedProperties;
+        set => _animatedProperties = value;
+    }
+
     public Vector3 GetDiffuseRenderColor(Vertex v)
     {
         return this._texture != null

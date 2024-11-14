@@ -51,11 +51,7 @@ public partial class MainWindow : Window
 
     void RenderSceneGraph()
     {
-        _parent = new Object(new SceneGraphNode(), null, new Object.AnimatedProperty<object>(45f, (f, deltaTime) =>
-        {
-            f = ((float)f + 0.05f * deltaTime) % 360;
-            return (f, Matrix4x4.CreateRotationY(float.DegreesToRadians((float) f)));
-        }));
+        _parent = new Object(new SceneGraphNode(), null);
         CreateSceneGraph();
         _rasterizer = new Rasterizer(Size, Size, _parent, _animator);
         _animator.RegisterAnimation(Render);
@@ -65,13 +61,6 @@ public partial class MainWindow : Window
 
     private void CreateMesh()
     {
-        // MeshGenerator.AddCube(_vertices, _tris,
-        //     new Vector3(1, 0, 0),
-        //     new Vector3(0, 1, 0),
-        //     new Vector3(0, 0, 1),
-        //     new Vector3(0, 0, 0),
-        //     new Vector3(1, 1, 0),
-        //     new Vector3(1, 0, 1));
         MeshGenerator.AddCube(_vertices, _tris,
             new Vector3(0,1,0),
             new Vector3(0,1,0),
@@ -79,36 +68,153 @@ public partial class MainWindow : Window
             new Vector3(0,1,0),
             new Vector3(0,1,0),
             new Vector3(0,1,0));
-        // MeshGenerator.AddSphere(_vertices,_tris, 3, new Vector3(0, 0, 1));
     }
 
     private void CreateSceneGraph()
+    {
+        // CreateSingleCube();
+        // CreateMultiColorCube();
+        // CreateSingleSphere();
+        // CreateTexturedCube();
+        // CreateTexturedSphere();
+        // CreateGroupedScene();
+        // CreateScene1();
+        CreateMultipleRotation();
+    }
+
+    private void CreateSingleCube()
+    {
+        SceneGraphNode cube = new SceneGraphNode();
+        Object cubeObject = new Object(cube, null);
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,0))));
+        MeshGenerator.AddSingleColorCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, new Vector3(0,1,0));
+    }
+
+    private void CreateMultiColorCube()
+    {
+        SceneGraphNode cube = new SceneGraphNode();
+        Object cubeObject = new Object(cube, null);
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,0))));
+        MeshGenerator.AddCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, 
+            new Vector3(0,1,0),
+            new Vector3(1,0,0),
+            new Vector3(0,0,1),
+            new Vector3(1,1,0),
+            new Vector3(0,1,1),
+            new Vector3(1,0,1)
+            );
+    }
+
+    private void CreateSingleSphere()
+    {
+        SceneGraphNode sphere = new SceneGraphNode();
+        Object sphereObject = new Object(sphere, null);
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,0,0))));
+        MeshGenerator.AddSphere(sphereObject.Node.Vertices, sphereObject.Node.Tris,5, new Vector3(0,1,0));
+    }
+
+    private void CreateTexturedCube()
     {
         WriteableBitmap fireData = TextureUtil.LoadTexture("tile1.png");
         byte[] pixels = TextureUtil.PreloadTextureData(fireData);
         TextureUtil.Texture fireTexture = new TextureUtil.Texture(pixels, fireData.PixelWidth, fireData.PixelWidth);
         
         SceneGraphNode cube = new SceneGraphNode();
-        Object.AnimatedProperty<object> p1 = new Object.AnimatedProperty<object>(45f, (f, deltaTime) =>
-        {
-            f = ((float)f + 0.05f * deltaTime) % 360;
-            return (f, Matrix4x4.CreateRotationX(float.DegreesToRadians((float) f)));
-        });
-        Object cubeObject = new Object(cube, fireTexture, p1);
-        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(1,0,0))));
+        Object cubeObject = new Object(cube, fireTexture);
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,0))));
         MeshGenerator.AddSingleColorCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, new Vector3(0,1,0));
-
-        SceneGraphNode sphere = new SceneGraphNode();
-        Object sphereObject = new Object(sphere, null);
-        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,1,1))));
-        MeshGenerator.AddSphere(sphereObject.Node.Vertices, sphereObject.Node.Tris, 4, new Vector3(1,0,0));
-        
-        
-        // SceneGraphNode sphere1 = new SceneGraphNode();
-        // _sceneGraphNode.Children.Add((sphere1, CreateTransformation(1f, new Vector3(-2f,0.5f,0))));
-        // MeshGenerator.AddSphere(sphere1.Vertices, sphere1.Tris, 4, new Vector3(1,0,0));
     }
 
+    private void CreateTexturedSphere()
+    {
+        WriteableBitmap fireData = TextureUtil.LoadTexture("fire2.png");
+        byte[] pixels = TextureUtil.PreloadTextureData(fireData);
+        TextureUtil.Texture fireTexture = new TextureUtil.Texture(pixels, fireData.PixelWidth, fireData.PixelWidth);
+        
+        SceneGraphNode sphere = new SceneGraphNode();
+        Object sphereObject = new Object(sphere, fireTexture);
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,0,0))));
+        MeshGenerator.AddSphere(sphereObject.Node.Vertices, sphereObject.Node.Tris,5, new Vector3(0,1,0));
+    }
+
+    private void CreateScene1()
+    {
+        WriteableBitmap fireData = TextureUtil.LoadTexture("tile1.png");
+        byte[] pixels = TextureUtil.PreloadTextureData(fireData);
+        TextureUtil.Texture fireTexture = new TextureUtil.Texture(pixels, fireData.PixelWidth, fireData.PixelWidth);
+        
+        SceneGraphNode cube = new SceneGraphNode();
+        Object cubeObject = new Object(cube, fireTexture);
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,0))));
+        MeshGenerator.AddSingleColorCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, new Vector3(0,1,0));
+        
+        SceneGraphNode sphere = new SceneGraphNode();
+        Object sphereObject = new Object(sphere, null);
+        MeshGenerator.AddSphere(sphereObject.Node.Vertices, sphereObject.Node.Tris, 4, new Vector3(1,0,0));
+        
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,3,0))));
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,-3,0))));
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(3,0,0))));
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(-3,0,0))));
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,0,3))));
+        _parent.Node.Children.Add((sphereObject, CreateTransformation(0, new Vector3(0,0,-3))));
+        
+    }
+
+    private void CreateGroupedScene()
+    {
+        Object group1 = new Object(new SceneGraphNode(), null, new Object.AnimatedProperty<object>(0f, (f, deltaTime) =>
+        {
+            f = ((float)f + 0.01f * deltaTime) % 360;
+            return (f, Matrix4x4.CreateRotationX(float.DegreesToRadians((float)f)));
+        }));
+        Object cube1 = new Object(new SceneGraphNode(), null);
+        MeshGenerator.AddSingleColorCube(cube1.Node.Vertices, cube1.Node.Tris, new Vector3(0,1,0));
+        
+        group1.Node.Children.Add((cube1, CreateTransformation(0, new Vector3(0,0,-2))));
+        group1.Node.Children.Add((cube1, CreateTransformation(0, new Vector3(0,0,2))));
+        group1.Node.Children.Add((cube1, CreateTransformation(0, new Vector3(0,2,0))));
+        group1.Node.Children.Add((cube1, CreateTransformation(0, new Vector3(0,-2,0))));
+        _parent.Node.Children.Add((group1, CreateTransformation(0, new Vector3(0,0,0))));
+        
+        Object group2 = new Object(new SceneGraphNode(), null, new Object.AnimatedProperty<object>(0f, (f, deltaTime) =>
+        {
+            f = ((float)f - 0.15f * deltaTime) % 360;
+            return (f, Matrix4x4.CreateRotationY(float.DegreesToRadians((float)f)));
+        }));
+        Object sphere = new Object(new SceneGraphNode(), null);
+        MeshGenerator.AddSphere(sphere.Node.Vertices, sphere.Node.Tris, 4,new Vector3(1,0,0));
+        
+        group2.Node.Children.Add((sphere, CreateTransformation(0, new Vector3(0,0,-4))));
+        group2.Node.Children.Add((sphere, CreateTransformation(0, new Vector3(0,0,4))));
+        group2.Node.Children.Add((sphere, CreateTransformation(0, new Vector3(-4,0,0))));
+        group2.Node.Children.Add((sphere, CreateTransformation(0, new Vector3(4,0,0))));
+        _parent.Node.Children.Add((group2, CreateTransformation(0, new Vector3(0,0,0))));
+    }
+
+    private void CreateMultipleRotation()
+    {
+        SceneGraphNode cube = new SceneGraphNode();
+        Object cubeObject = new Object(cube, null, new Object.AnimatedProperty<object>(45f, (f, deltaTime) =>
+        {
+            f = ((float)f + 0.05f * deltaTime) % 360;
+            return (f, Matrix4x4.CreateRotationX(float.DegreesToRadians((float)f)));
+        }));
+        MeshGenerator.AddSingleColorCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, new Vector3(0,1,0));
+        
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,2))));
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(0, new Vector3(0,0,-2))));
+
+        _parent.AnimatedProperties =
+        [
+            new Object.AnimatedProperty<object>(45f, (f, deltaTime) =>
+            {
+                f = ((float)f + 0.05f * deltaTime) % 360;
+                return (f, Matrix4x4.CreateRotationY(float.DegreesToRadians((float)f)));
+            })
+        ];
+    }
+    
     private Matrix4x4 CreateTransformation(float rotation, Vector3 translation)
     {
         var M = Matrix4x4.CreateRotationX(float.DegreesToRadians(rotation));

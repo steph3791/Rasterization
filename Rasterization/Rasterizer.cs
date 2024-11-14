@@ -20,7 +20,7 @@ public class Rasterizer
     private List<Light> _lightSources;
 
     private Animator _animator;
-    private float _rotationDegrees = 45f;
+    private float _rotationDegrees = 0f;
     private float _rotationSpeed = 0.05f;
     private Vector3 _camera;
     private float[][] _zBuffer;
@@ -36,7 +36,7 @@ public class Rasterizer
         _vertices = vertices;
         _tris = tris;
         _animator = animator;
-        _camera = new Vector3(0, 0, -4);
+        _camera = new Vector3(0, 0, -6);
         _zBuffer = new float[_sizeX][];
         _pixels = new byte[_sizeX * _sizeY * 3];
 
@@ -58,7 +58,7 @@ public class Rasterizer
 
     private void CreateLightSources()
     {
-        _lightSources.Add(new Light(new Vector3(-2, 1, -1), new Vector3(1, 1, 1)));
+        _lightSources.Add(new Light(new Vector3(-6, 2, -8), new Vector3(1, 1, 1)));
     }
 
     public WriteableBitmap Render()
@@ -92,15 +92,30 @@ public class Rasterizer
             foreach (var property in obj.AnimatedProperties)
             {
                 M *= property.GetTransformation(deltaTime);
+                
             }
         }
         Render(obj, M, M*VP, near, far);
+        
         foreach (var graph in obj.Node.Children)
         {
             var m = graph.Transformation * M;
             RenderSceneGraph(graph.child, m, VP, near, far);
         }
+  
     }
+
+    private void ApplyLocalTransform(Object obj, Matrix4x4 transform)
+    {
+        List<Vertex> localTransform = new List<Vertex>();
+        foreach (var v in obj.Node.Vertices)
+        {
+            Vector4 transformedPosition = Vector4.Transform(v.Position, transform); // Apply transformation
+            localTransform.Add(v with { Position = transformedPosition });
+        }
+        obj.Node.Vertices = localTransform;
+    }
+    
 
     /// <summary>
     /// Renders the given vertices to the Screen
@@ -208,9 +223,9 @@ public class Rasterizer
             Vector3 reflectDir = Vector3.Reflect(-lightDir, n);
             float cosReflected = Vector3.Dot(reflectDir, viewDir);
             Vector3 specularIllumination = Vector3.Zero;
-            if (cos > 0 && cosReflected > 1 - 0.01f)
+            if (cos > 0 && cosReflected > 0)
             {
-                float specularStrength = MathF.Pow(cosReflected, 40);
+                float specularStrength = MathF.Pow(cosReflected,25);
                 specularIllumination = light.color * specularStrength;
             }
 
