@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -25,6 +26,8 @@ public class Rasterizer
     private float[][] _zBuffer;
 
     private byte[] _pixels;
+
+    private float deltaTime = 0;
 
     public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris, Animator animator)
     {
@@ -67,18 +70,15 @@ public class Rasterizer
             _zBuffer[i] = new float[_sizeY];
             _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
         }
-        if (Config.Animate)
-        {
-            _rotationDegrees = (_rotationDegrees + _rotationSpeed * _animator.GetDeltaTime()) % 360;
-        }
-
+        
         float near = 0.1f;
         float far = 100f;
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var VP = V * P;
-        
+
+        deltaTime = _animator.GetDeltaTime();
         RenderSceneGraph(_parent, M, VP, near, far);
         
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
@@ -87,6 +87,13 @@ public class Rasterizer
 
     private void RenderSceneGraph(Object obj, Matrix4x4 M, Matrix4x4 VP, float near, float far)
     {
+        if (Config.Animate && obj.AnimatedProperties != null)
+        {
+            foreach (var property in obj.AnimatedProperties)
+            {
+                M *= property.GetTransformation(deltaTime);
+            }
+        }
         Render(obj, M, M*VP, near, far);
         foreach (var graph in obj.Node.Children)
         {

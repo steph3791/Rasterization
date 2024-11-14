@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Data;
+using System.Numerics;
 using RayTracing;
 
 namespace Rasterization;
@@ -7,16 +8,21 @@ public class Object
 {
     private SceneGraphNode _node;
     private TextureUtil.Texture? _texture;
+    private AnimatedProperty<object>[]? _animatedProperties;
 
-    public Object(SceneGraphNode node, TextureUtil.Texture? texture)
+
+    public Object(SceneGraphNode node, TextureUtil.Texture? texture, params AnimatedProperty<object>[] animatedProperties)
     {
         _node = node;
         _texture = texture;
+        _animatedProperties = animatedProperties;
     }
 
     public SceneGraphNode Node => _node;
 
     public TextureUtil.Texture? Texture => _texture;
+    public AnimatedProperty<object>[]? AnimatedProperties => _animatedProperties;
+
     
     public Vector3 GetDiffuseRenderColor(Vertex v)
     {
@@ -69,6 +75,35 @@ public class Object
         byte green = pixelData[pixelIndex + 1];
         byte red = pixelData[pixelIndex + 2];
         return ColorUtil.ToLinearNormlized(new Vector3(red, green, blue));
+    }
+
+    public class AnimatedProperty<T>
+    {
+        private T _value;
+        private readonly Func<T, float, (T value, Matrix4x4 matrix)> _animationUpdate;
+
+        public T Value
+        {
+            get => _value;
+            set => _value = value;
+        }
+        
+        // Constructor
+        public AnimatedProperty(T value, Func<T, float, (T value, Matrix4x4 matrix)> animationUpdate)
+        {
+            Console.WriteLine("NEw instance");
+            _value = value;
+            _animationUpdate = animationUpdate;
+        }
+
+        public Matrix4x4 GetTransformation(float deltaTime)
+        {
+            var data = _animationUpdate(_value, deltaTime);
+            Console.WriteLine("Value: " + data.value);
+            _value = data.value;
+            Console.WriteLine("NEw Value: " + _value);
+            return data.matrix;
+        }
     }
 
 }
