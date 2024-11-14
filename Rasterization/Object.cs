@@ -31,11 +31,36 @@ public class Object
         {
             throw new Exception("Texture could not be loaded. Ensure that sphere has assigned a texture.");
         }
-        int textureX = (int)(s * _texture.Value.Width);
-        int textureY = (int)(t * _texture.Value.Height);
+        float textureX = s * _texture.Value.Width;
+        float textureY = t * _texture.Value.Height;
+
+        
+        if (Config.BilinearFiltering)
+        {
+            int s0 = (int) MathF.Floor(textureX);
+            int t0 = (int) MathF.Floor(textureY);
+
+            float fracX = textureX - s0;
+            float fracY = textureY - t0;
+            
+            Vector3 topLeft = GetColor(s0, t0);          // C[|s|, |t|]
+            Vector3 topRight = GetColor(s0 + 1, t0);     // C[|s| + 1, |t|]
+            Vector3 bottomLeft = GetColor(s0, t0 + 1);   // C[|s|, |t| + 1]
+            Vector3 bottomRight = GetColor(s0 + 1, t0 + 1); // C[|s| + 1, |t| + 1]
+
+            Vector3 left = Vector3.Lerp(topLeft, bottomLeft, fracY);
+            Vector3 right = Vector3.Lerp(topRight, bottomRight, fracY);
+
+            // Interpolate vertically between the two results
+            return Vector3.Lerp(left, right, fracX);
+        }
+        return GetColor((int)MathF.Floor(textureX), (int)MathF.Floor(textureY));
+    }
+
+    private Vector3 GetColor(int textureX, int textureY)
+    {
         textureX = Math.Clamp(textureX, 0, _texture.Value.Width-1);
         textureY = Math.Clamp(textureY,0, _texture.Value.Height-1);
-        
         int step = _texture.Value.Width * 4;
         byte[] pixelData = _texture.Value.Pixels;
         
