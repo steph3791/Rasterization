@@ -22,8 +22,9 @@ public partial class MainWindow : Window
     List<(int A, int B, int C)> _tris = new List<(int A, int B, int C)>();
     Rasterizer _rasterizer;
     Animator _animator;
-    
-    SceneGraphNode _sceneGraphNode;
+
+    private Object _parent;
+    // SceneGraphNode _sceneGraphNode;
     
     private const int Size = 450;
     
@@ -50,9 +51,9 @@ public partial class MainWindow : Window
 
     void RenderSceneGraph()
     {
-        _sceneGraphNode = new SceneGraphNode();
+        _parent = new Object(new SceneGraphNode(), null);
         CreateSceneGraph();
-        _rasterizer = new Rasterizer(Size, Size, _sceneGraphNode, _animator);
+        _rasterizer = new Rasterizer(Size, Size, _parent, _animator);
         _animator.RegisterAnimation(Render);
         _animator.Start();
     }
@@ -79,17 +80,21 @@ public partial class MainWindow : Window
 
     private void CreateSceneGraph()
     {
+        WriteableBitmap fireData = TextureUtil.LoadTexture("fire.png");
+        byte[] pixels = TextureUtil.PreloadTextureData(fireData);
+        TextureUtil.Texture fireTexture = new TextureUtil.Texture(pixels, fireData.PixelWidth, fireData.PixelWidth);
         
         SceneGraphNode cube = new SceneGraphNode();
-        _sceneGraphNode.Children.Add((cube, CreateTransformation(3f, new Vector3(0,0,0))));
-        MeshGenerator.AddSingleColorCube(cube.Vertices, cube.Tris, new Vector3(0,1,0));
+        Object cubeObject = new Object(cube, fireTexture);
+        _parent.Node.Children.Add((cubeObject, CreateTransformation(3f, new Vector3(0,0,0))));
+        MeshGenerator.AddSingleColorCube(cubeObject.Node.Vertices, cubeObject.Node.Tris, new Vector3(0,1,0));
 
-        SceneGraphNode sphere = new SceneGraphNode();
-        _sceneGraphNode.Children.Add((sphere, CreateTransformation(1f, new Vector3(2,0.5f,0))));
-        MeshGenerator.AddSphere(sphere.Vertices, sphere.Tris, 4, new Vector3(1,0,0));
-        SceneGraphNode sphere1 = new SceneGraphNode();
-        _sceneGraphNode.Children.Add((sphere1, CreateTransformation(1f, new Vector3(-2f,0.5f,0))));
-        MeshGenerator.AddSphere(sphere1.Vertices, sphere1.Tris, 4, new Vector3(1,0,0));
+        // SceneGraphNode sphere = new SceneGraphNode();
+        // _sceneGraphNode.Children.Add((sphere, CreateTransformation(1f, new Vector3(2,0.5f,0))));
+        // MeshGenerator.AddSphere(sphere.Vertices, sphere.Tris, 4, new Vector3(1,0,0));
+        // SceneGraphNode sphere1 = new SceneGraphNode();
+        // _sceneGraphNode.Children.Add((sphere1, CreateTransformation(1f, new Vector3(-2f,0.5f,0))));
+        // MeshGenerator.AddSphere(sphere1.Vertices, sphere1.Tris, 4, new Vector3(1,0,0));
     }
 
     private Matrix4x4 CreateTransformation(float rotation, Vector3 translation)

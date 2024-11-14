@@ -15,7 +15,7 @@ public class Rasterizer
     private List<Vertex> _vertices;
     private List<(int A, int B, int C)> _tris;
 
-    private SceneGraphNode _sceneGraph;
+    private Object _parent;
     private List<Light> _lightSources;
 
     private Animator _animator;
@@ -47,10 +47,10 @@ public class Rasterizer
         CreateLightSources();
     }
 
-    public Rasterizer(int sizeX, int sizeY, SceneGraphNode sceneGraph, Animator animator) : this(sizeX, sizeY,
-        sceneGraph.Vertices, sceneGraph.Tris, animator)
+    public Rasterizer(int sizeX, int sizeY, Object parent, Animator animator) : this(sizeX, sizeY,
+        parent.Node.Vertices, parent.Node.Tris, animator)
     {
-        _sceneGraph = sceneGraph;
+        _parent = parent;
     }
 
     private void CreateLightSources()
@@ -78,26 +78,20 @@ public class Rasterizer
         var V = Matrix4x4.CreateLookAt(_camera, Vector3.Zero, new Vector3(0, -1, 0));
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var VP = V * P;
-
-        if (_sceneGraph != null)
-        {
-            RenderSceneGraph(_sceneGraph, M, VP, near, far);
-        }
-        {
-            Render(_vertices, _tris, M, VP, near, far);
-        }
-
+        
+        RenderSceneGraph(_parent, M, VP, near, far);
+        
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
         return bitmap;
     }
 
-    private void RenderSceneGraph(SceneGraphNode node, Matrix4x4 M, Matrix4x4 VP, float near, float far)
+    private void RenderSceneGraph(Object obj, Matrix4x4 M, Matrix4x4 VP, float near, float far)
     {
-        Render(node.Vertices, node.Tris, M, M*VP, near, far);
-        foreach (var graph in node.Children)
+        Render(obj, M, M*VP, near, far);
+        foreach (var graph in obj.Node.Children)
         {
             var m = graph.Transformation * M;
-            RenderSceneGraph(graph.Node, m, VP, near, far);
+            RenderSceneGraph(graph.child, m, VP, near, far);
         }
     }
 
@@ -107,9 +101,11 @@ public class Rasterizer
     /// <param name="vertices"></param>
     /// <param name="tris"></param>
     /// <returns>Byte array containing the pixel information for the render</returns>
-    private void Render(List<Vertex> vertices, List<(int A, int B, int C)> tris, Matrix4x4 M, Matrix4x4 MVP,
+    private void Render(Object obj, Matrix4x4 M, Matrix4x4 MVP,
         float near, float far)
     {
+        List<Vertex> vertices = obj.Node.Vertices;
+        List<(int A, int B, int C)> tris = obj.Node.Tris;
         for (int i = 0; i < tris.Count; i++)
         {
             //Vertices A,B,C
@@ -149,7 +145,7 @@ public class Rasterizer
                             if (x < _zBuffer.Length && x>=0 && y < _zBuffer[x].Length && y>=0 && _zBuffer[x][y] > Q.Position.Z)
                             {
                                 _zBuffer[x][y] = Q.Position.Z;
-                                Vector3 color = FragmentShader(Q);
+                                Vector3 color = FragmentShader(Q, obj);
                                 int index = y * (_sizeX * 3) + x * 3;
                                 _pixels[index] = (byte)Math.Clamp(color.X * 255, 0, 255);
                                 _pixels[index + 1] = (byte)Math.Clamp(color.Y * 255, 0, 255);
@@ -176,10 +172,11 @@ public class Rasterizer
         return (u, v);
     }
 
-    private Vector3 FragmentShader(Vertex Q)
+    private Vector3 FragmentShader(Vertex Q, Object obj)
     {
         Vector3 ambientLightColor = new Vector3(0.1f, 0.1f, 0.1f); // Adjust as needed
-        Vector3 ambient = ambientLightColor * Q.Color;
+        Vector3 diffuseColor = obj.GetDiffuseRenderColor(Q);
+        Vector3 ambient = ambientLightColor * diffuseColor;
 
         Vector3 color = Vector3.Zero;
         Vector3 n = Vector3.Normalize(Q.Normal);
@@ -197,7 +194,7 @@ public class Rasterizer
             Vector3 diffuseIllumination = Vector3.Zero;
             if (cos > 0)
             {
-                diffuseIllumination = light.color * Q.Color * cos;
+                diffuseIllumination = light.color * diffuseColor * cos;
             }
 
             // Specular component
