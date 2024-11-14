@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+// ReSharper disable All
 
 namespace Rasterization;
 
@@ -12,29 +13,22 @@ public class Rasterizer
 {
     private readonly int _sizeX;
     private readonly int _sizeY;
+    
+    private readonly Object _parent;
+    private readonly List<Light> _lightSources;
 
-    private List<Vertex> _vertices;
-    private List<(int A, int B, int C)> _tris;
-
-    private Object _parent;
-    private List<Light> _lightSources;
-
-    private Animator _animator;
-    private float _rotationDegrees = 0f;
-    private float _rotationSpeed = 0.05f;
-    private Vector3 _camera;
-    private float[][] _zBuffer;
+    private readonly Animator _animator;
+    private readonly float _rotationDegrees = 0f;
+    private readonly Vector3 _camera;
+    private readonly float[][] _zBuffer;
 
     private byte[] _pixels;
-
-    private float deltaTime = 0;
-
-    public Rasterizer(int sizeX, int sizeY, List<Vertex> vertices, List<(int A, int B, int C)> tris, Animator animator)
+    private float _deltaTime = 0;
+    
+    public Rasterizer(int sizeX, int sizeY, Object parent, Animator animator)
     {
         _sizeX = sizeX;
         _sizeY = sizeY;
-        _vertices = vertices;
-        _tris = tris;
         _animator = animator;
         _camera = new Vector3(0, 0, -6);
         _zBuffer = new float[_sizeX][];
@@ -46,13 +40,8 @@ public class Rasterizer
             _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
         }
 
-        _lightSources = new List<Light>();
+        _lightSources = [];
         CreateLightSources();
-    }
-
-    public Rasterizer(int sizeX, int sizeY, Object parent, Animator animator) : this(sizeX, sizeY,
-        parent.Node.Vertices, parent.Node.Tris, animator)
-    {
         _parent = parent;
     }
 
@@ -78,7 +67,7 @@ public class Rasterizer
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var VP = V * P;
 
-        deltaTime = _animator.GetDeltaTime();
+        _deltaTime = _animator.GetDeltaTime();
         RenderSceneGraph(_parent, M, VP, near, far);
         
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
@@ -87,42 +76,14 @@ public class Rasterizer
 
     private void RenderSceneGraph(Object obj, Matrix4x4 M, Matrix4x4 VP, float near, float far)
     {
-        // if (Config.Animate && obj.AnimatedProperties != null)
-        // {
-        //     foreach (var property in obj.AnimatedProperties)
-        //     {
-        //         M *= property.GetTransformation(deltaTime);
-        //         
-        //     }
-        // }
         Render(obj, M, M*VP, near, far);
-        
         foreach (var graph in obj.Node.Children)
         {
-            var m = graph.transformations.GetTransformation(deltaTime) * M;
+            var m = graph.transformations.GetTransformation(_deltaTime) * M;
             RenderSceneGraph(graph.child, m, VP, near, far);
         }
-  
-    }
-
-    private void ApplyLocalTransform(Object obj, Matrix4x4 transform)
-    {
-        List<Vertex> localTransform = new List<Vertex>();
-        foreach (var v in obj.Node.Vertices)
-        {
-            Vector4 transformedPosition = Vector4.Transform(v.Position, transform); // Apply transformation
-            localTransform.Add(v with { Position = transformedPosition });
-        }
-        obj.Node.Vertices = localTransform;
     }
     
-
-    /// <summary>
-    /// Renders the given vertices to the Screen
-    /// </summary>
-    /// <param name="vertices"></param>
-    /// <param name="tris"></param>
-    /// <returns>Byte array containing the pixel information for the render</returns>
     private void Render(Object obj, Matrix4x4 M, Matrix4x4 MVP,
         float near, float far)
     {
@@ -238,9 +199,6 @@ public class Rasterizer
 
     private Vertex TransformQToCameraSpace(Vertex Q, float near, float far, Matrix4x4 M, Matrix4x4 MVP)
     {
-        // Q = VertexShader(Q, M, MVP);
-        // Q = Project(Q);
-        // Q = ProjectTo2D(Q, _sizeX / 2);
         float z = far * near / (far + (near - far) * Q.Position.Z);
         return z * Q;
     }
