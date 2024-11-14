@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.IO;
+using System.Numerics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,7 +10,6 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Rasterization;
 
@@ -47,8 +47,24 @@ public partial class MainWindow : Window
         // CreateSingleSphere();
         // CreateTexturedCube();
         // CreateTexturedSphere();
-        CreateScene1();
+        // CreateScene1();
         // CreateGroupedScene();
+        // ShowCaseBilinear(true);
+        ShowCaseBilinear(true);
+    }
+
+    private void ShowCaseBilinear(bool bilinear)
+    {
+        Config.Animate = false;
+        Config.BilinearFiltering = bilinear;
+        Config.DefaultLightSource = Config.CameraPosition with{ Y = 4f};
+        WriteableBitmap tile = TextureUtil.LoadTexture("portal.png");
+        byte[] pixels = TextureUtil.PreloadTextureData(tile);
+        TextureUtil.Texture texture = new TextureUtil.Texture(pixels, tile.PixelWidth, tile.PixelWidth);
+        
+        Object obj = new Object(new SceneGraphNode(), texture);
+        MeshGenerator.AddSingleColorCube(obj.Node.Vertices, obj.Node.Tris, new Vector3(0,1,0));
+        _parent.Node.Children.Add((obj, CreateTransformation(translationZ: -3.75f)));
     }
 
     private void CreateSingleCube()
@@ -197,7 +213,40 @@ public partial class MainWindow : Window
     
     private void Render()
     {
-        Image.Source = _rasterizer.Render();
+        WriteableBitmap bitmap = _rasterizer.Render();
+        Image.Source = bitmap;
+        if (!saved)
+        {
+            SaveWriteableBitmapAsPng(bitmap, "render");
+            saved = true;
+        }
+    }
+
+    private bool saved;
+    private void SaveWriteableBitmapAsPng(WriteableBitmap bitmap, string presetName)
+    {
+        Console.WriteLine($"Saving Image for: {presetName}");
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{presetName}.png");
+
+        string directory = Path.GetDirectoryName(path);
+        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+        string extension = Path.GetExtension(path);
+
+        string newFilePath = path;
+        int counter = 1;
+
+        while (File.Exists(newFilePath))
+        {
+            newFilePath = Path.Combine(directory, $"{fileNameWithoutExtension}_{counter}{extension}");
+            counter++;
+        }
+
+        PngBitmapEncoder pngEncoder = new PngBitmapEncoder();
+        pngEncoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var fileStream = new FileStream(newFilePath, FileMode.Create))
+        {
+            pngEncoder.Save(fileStream);
+        }
     }
 
     private enum Direction { X,Y,Z, None }

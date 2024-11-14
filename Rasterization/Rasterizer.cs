@@ -47,7 +47,7 @@ public class Rasterizer
 
     private void CreateLightSources()
     {
-        _lightSources.Add(new Light(new Vector3(-6, 2, -8), new Vector3(1, 1, 1)));
+        _lightSources.Add(new Light(Config.DefaultLightSource, new Vector3(1, 1, 1)));
     }
 
     public WriteableBitmap Render()
@@ -67,7 +67,10 @@ public class Rasterizer
         var P = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(90), (float)_sizeX / _sizeY, near, far);
         var VP = V * P;
 
-        _deltaTime = _animator.GetDeltaTime();
+        if (Config.Animate)
+        {
+            _deltaTime = _animator.GetDeltaTime();
+        }
         RenderSceneGraph(_parent, M, VP, near, far);
         
         bitmap.WritePixels(new Int32Rect(0, 0, _sizeX, _sizeY), _pixels, _sizeX * 3, 0);
