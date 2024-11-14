@@ -87,19 +87,19 @@ public class Rasterizer
 
     private void RenderSceneGraph(Object obj, Matrix4x4 M, Matrix4x4 VP, float near, float far)
     {
-        if (Config.Animate && obj.AnimatedProperties != null)
-        {
-            foreach (var property in obj.AnimatedProperties)
-            {
-                M *= property.GetTransformation(deltaTime);
-                
-            }
-        }
+        // if (Config.Animate && obj.AnimatedProperties != null)
+        // {
+        //     foreach (var property in obj.AnimatedProperties)
+        //     {
+        //         M *= property.GetTransformation(deltaTime);
+        //         
+        //     }
+        // }
         Render(obj, M, M*VP, near, far);
         
         foreach (var graph in obj.Node.Children)
         {
-            var m = graph.Transformation * M;
+            var m = graph.transformations.GetTransformation(deltaTime) * M;
             RenderSceneGraph(graph.child, m, VP, near, far);
         }
   
