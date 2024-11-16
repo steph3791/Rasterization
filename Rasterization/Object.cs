@@ -63,9 +63,10 @@ public class Object
     {
         textureX = Math.Clamp(textureX, 0, _texture.Value.Width-1);
         textureY = Math.Clamp(textureY,0, _texture.Value.Height-1);
+        
         int step = _texture.Value.Width * 4;
         byte[] pixelData = _texture.Value.Pixels;
-        
+
         int pixelIndex = textureY * step + textureX * 4;
         byte blue = pixelData[pixelIndex];
         byte green = pixelData[pixelIndex + 1];
