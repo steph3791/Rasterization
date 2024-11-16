@@ -26,14 +26,12 @@ public class Animator
     
     public void Start()
     {
-        _lastTime = DateTime.Now; // Initialize last time
+        _lastTime = DateTime.Now;
         _timer.Start();
     }
     
-    // Called when the timer ticks
     private void OnTick(object sender, EventArgs e)
     {
-        // Invoke all registered actions
         foreach (var action in _actions)
         {
             action.Invoke();
@@ -48,7 +46,7 @@ public class Animator
     public float GetDeltaTime()
     {
         DateTime currentTime = DateTime.Now;
-        float deltaTime = (float) (currentTime - _lastTime).TotalMilliseconds ; // Time in seconds
+        float deltaTime = (float) (currentTime - _lastTime).TotalMilliseconds;
         _lastTime = currentTime;
         return deltaTime;
     }

@@ -71,8 +71,7 @@ public class Rasterizer
                 _zBuffer[i] = Enumerable.Repeat(float.MaxValue, _sizeY).ToArray();
             }
         }
-
-
+        
         float near = 0.1f;
         float far = 100f;
         var M = Matrix4x4.CreateRotationY(float.DegreesToRadians(_rotationDegrees));
@@ -247,7 +246,7 @@ public class Rasterizer
 
     private Vector3 FragmentShader(Vertex Q, Object obj)
     {
-        Vector3 ambientLightColor = Config.AmbientLightColor; // Adjust as needed
+        Vector3 ambientLightColor = Config.AmbientLightColor;
         Vector3 diffuseColor = obj.GetDiffuseRenderColor(Q);
         Vector3 ambient = ambientLightColor * diffuseColor;
         if (!Config.DiffuseLighting && !Config.SpecularLighting)
